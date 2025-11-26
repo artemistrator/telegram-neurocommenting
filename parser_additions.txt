@@ -1,0 +1,89 @@
+# Parser models and endpoints to add to main.py
+
+# Add these models after MonitoringSettings class (around line 85):
+class ParserSearchRequest(BaseModel):
+    keywords: List[str]
+    min_members: int = 0
+    only_with_comments: bool = False
+    max_results_per_keyword: int = 10
+
+class ParserSaveChannelsRequest(BaseModel):
+    channels: List[Dict]
+
+# Add this import after line 13 (after import sys):
+import parser
+
+# Add these routes before the logout endpoint (before line 567):
+
+@app.get("/parser", response_class=HTMLResponse)
+async def get_parser_page():
+    """Return parser HTML page"""
+    with open("parser.html", "r", encoding="utf-8") as f:
+        return HTMLResponse(content=f.read(), status_code=200)
+
+@app.post("/api/parser/search")
+async def search_channels(request: ParserSearchRequest):
+    """Search for Telegram channels by keywords"""
+    global telegram_client
+    
+    # Check if client is authorized
+    if not telegram_client:
+        raise HTTPException(status_code=401, detail="Telegram client not initialized. Please authorize first.")
+    
+    if not await telegram_client.is_user_authorized():
+        raise HTTPException(status_code=401, detail="Not authorized. Please login first.")
+    
+    try:
+        # Search channels using parser module
+        channels = await parser.search_channels_by_keywords(
+            client=telegram_client,
+            keywords=request.keywords,
+            min_members=request.min_members,
+            only_with_comments=request.only_with_comments,
+            max_results_per_keyword=request.max_results_per_keyword
+        )
+        
+        return {
+            "status": "success",
+            "channels": channels,
+            "total": len(channels)
+        }
+        
+    except Exception as e:
+        print(f"Error searching channels: {e}")
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Error searching channels: {str(e)}")
+
+@app.post("/api/parser/save-channels")
+async def save_channels_to_config(request: ParserSaveChannelsRequest):
+    """Save selected channels to config.json for monitoring"""
+    try:
+        # Get existing monitored chats or create new list
+        existing_chats = config.get('monitored_chats', [])
+        existing_ids = {chat['id'] for chat in existing_chats}
+        
+        # Add new channels (avoid duplicates)
+        new_channels = []
+        for channel in request.channels:
+            if channel['id'] not in existing_ids:
+                new_channels.append({
+                    'id': channel['id'],
+                    'name': channel.get('title', ''),
+                    'username': channel.get('username', '')
+                })
+                existing_ids.add(channel['id'])
+        
+        # Update config
+        config['monitored_chats'] = existing_chats + new_channels
+        save_config()
+        
+        return {
+            "status": "success",
+            "added": len(new_channels),
+            "total": len(config['monitored_chats'])
+        }
+        
+    except Exception as e:
+        print(f"Error saving channels: {e}")
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Error saving channels: {str(e)}")

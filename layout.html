@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram Monitor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .menu-item {
+            transition: all 0.2s ease;
+        }
+
+        .menu-item:hover {
+            background-color: #374151;
+        }
+
+        .menu-item.active {
+            background-color: #3b82f6;
+        }
+
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            height: 100vh;
+            width: 250px;
+            overflow-y: auto;
+        }
+
+        .content-area {
+            margin-left: 250px;
+            min-height: 100vh;
+        }
+
+        /* Mobile responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                z-index: 50;
+            }
+
+            .sidebar.mobile-open {
+                transform: translateX(0);
+            }
+
+            .content-area {
+                margin-left: 0;
+            }
+
+            .mobile-overlay {
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 40;
+            }
+
+            .mobile-overlay.active {
+                display: block;
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100">
+    <!-- Mobile overlay -->
+    <div class="mobile-overlay" id="mobileOverlay"></div>
+
+    <!-- Sidebar -->
+    <div class="sidebar bg-gray-800 text-white flex flex-col" id="sidebar">
+        <!-- Logo -->
+        <div class="p-6 border-b border-gray-700">
+            <h1 class="text-2xl font-bold">TG Monitor</h1>
+            <p class="text-sm text-gray-400 mt-1">Управление аккаунтами</p>
+        </div>
+
+        <!-- Menu -->
+        <nav class="flex-1 p-4">
+            <a href="#" class="menu-item flex items-center px-4 py-3 rounded-lg mb-2 text-white no-underline"
+                data-page="home">
+                <span class="text-xl mr-3">🏠</span>
+                <span>Главная</span>
+            </a>
+            <a href="#" class="menu-item flex items-center px-4 py-3 rounded-lg mb-2 text-white no-underline"
+                data-page="accounts">
+                <span class="text-xl mr-3">👤</span>
+                <span>Аккаунты</span>
+            </a>
+            <a href="#" class="menu-item flex items-center px-4 py-3 rounded-lg mb-2 text-white no-underline"
+                data-page="parser">
+                <span class="text-xl mr-3">🔍</span>
+                <span>Парсинг</span>
+            </a>
+            <a href="#" class="menu-item flex items-center px-4 py-3 rounded-lg mb-2 text-white no-underline"
+                data-page="dashboard">
+                <span class="text-xl mr-3">📊</span>
+                <span>Дашборд</span>
+            </a>
+            <a href="#" class="menu-item flex items-center px-4 py-3 rounded-lg mb-2 text-white no-underline"
+                data-page="settings">
+                <span class="text-xl mr-3">⚙️</span>
+                <span>Настройки</span>
+            </a>
+        </nav>
+
+        <!-- Footer -->
+        <div class="p-4 border-t border-gray-700">
+            <p class="text-xs text-gray-500 text-center">v1.0.0 © 2025</p>
+        </div>
+    </div>
+
+    <!-- Mobile menu button -->
+    <button class="md:hidden fixed top-4 left-4 z-50 bg-gray-800 text-white p-2 rounded-lg" id="mobileMenuBtn">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+        </svg>
+    </button>
+
+    <!-- Content Area -->
+    <div class="content-area bg-gray-50">
+        <div class="p-8" id="content">
+            <!-- Dynamic content will be loaded here -->
+            <div class="flex items-center justify-center h-64">
+                <div class="text-center">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                    <p class="text-gray-600">Загрузка...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Navigation functions
+        async function loadPage(page) {
+            try {
+                const response = await fetch(`/pages/${page}`);
+                if (!response.ok) throw new Error('Page not found');
+
+                const html = await response.text();
+                document.getElementById('content').innerHTML = html;
+
+                // Update active menu item
+                document.querySelectorAll('.menu-item').forEach(item => {
+                    item.classList.remove('active');
+                });
+                const activeItem = document.querySelector(`[data-page="${page}"]`);
+                if (activeItem) {
+                    activeItem.classList.add('active');
+                }
+
+                // Update URL
+                history.pushState({ page }, '', `/${page}`);
+
+                // Close mobile menu if open
+                closeMobileMenu();
+
+                // Execute page-specific scripts if any
+                executePageScripts();
+
+            } catch (error) {
+                console.error('Error loading page:', error);
+                alert('Ошибка загрузки страницы: ' + error.message);
+            }
+        }
+
+        // Execute scripts in loaded content
+        function executePageScripts() {
+            const scripts = document.getElementById('content').querySelectorAll('script');
+            scripts.forEach(script => {
+                const newScript = document.createElement('script');
+                if (script.src) {
+                    newScript.src = script.src;
+                } else {
+                    newScript.textContent = script.textContent;
+                }
+                document.body.appendChild(newScript);
+            });
+        }
+
+        // Mobile menu functions
+        function openMobileMenu() {
+            document.getElementById('sidebar').classList.add('mobile-open');
+            document.getElementById('mobileOverlay').classList.add('active');
+        }
+
+        function closeMobileMenu() {
+            document.getElementById('sidebar').classList.remove('mobile-open');
+            document.getElementById('mobileOverlay').classList.remove('active');
+        }
+
+        // Event listeners
+        document.querySelectorAll('.menu-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                const page = item.dataset.page;
+                loadPage(page);
+            });
+        });
+
+        document.getElementById('mobileMenuBtn').addEventListener('click', openMobileMenu);
+        document.getElementById('mobileOverlay').addEventListener('click', closeMobileMenu);
+
+        // Load page on initial load
+        window.addEventListener('DOMContentLoaded', () => {
+            const path = window.location.pathname.slice(1) || 'home';
+            loadPage(path);
+        });
+
+        // Handle browser back/forward
+        window.addEventListener('popstate', (event) => {
+            if (event.state && event.state.page) {
+                loadPage(event.state.page);
+            } else {
+                loadPage('home');
+            }
+        });
+    </script>
+</body>
+
+</html>

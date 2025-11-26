@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+.idea/
+.vscode/
+*.session
+*.session-journal
+config.json
+telegram_session.session
+telegram_session.session-journal
