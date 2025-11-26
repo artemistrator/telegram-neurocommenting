@@ -618,7 +618,11 @@ if __name__ == "__main__":
                     row.className = 'hover:bg-gray-50';
 
                     const statusIcon = acc.status === 'active' ? '🟢' : '🔴';
-                    const proxyText = acc.proxy ? `${acc.proxy.host}:${acc.proxy.port}` : '-';
+                    // Handle proxy display - check if proxy exists and has required fields
+                    let proxyText = '-';
+                    if (acc.proxy && acc.proxy.host && acc.proxy.port) {
+                        proxyText = `${acc.proxy.host}:${acc.proxy.port}`;
+                    }
                     const lastActive = acc.last_active ? new Date(acc.last_active).toLocaleString('ru-RU') : 'Никогда';
 
                     row.innerHTML = `

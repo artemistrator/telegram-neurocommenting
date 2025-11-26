@@ -12,6 +12,11 @@ from telethon.errors import SessionPasswordNeededError
 import aiohttp
 import sys
 from account_manager import AccountManager
+from database import init_database, migrate_from_json, get_setting, set_setting
+from subscriber import add_channels_to_queue, process_subscription_queue, get_subscription_stats
+
+from database import init_database, migrate_from_json, get_setting, set_setting
+from subscriber import add_channels_to_queue, process_subscription_queue, get_subscription_stats
 
 # Configuration file
 CONFIG_FILE = 'config.json'
@@ -86,6 +91,15 @@ class MonitoringSettings(BaseModel):
     use_triggers: bool = True
     trigger_words: List[str] = []
 
+class ChannelListRequest(BaseModel):
+    channel_urls: List[str]
+
+class LimitsSettings(BaseModel):
+    max_subs_per_day: int
+    delay_min_seconds: int
+    delay_max_seconds: int
+
+
 # Save config to file
 def save_config():
     # Update the telegram section in config
@@ -103,6 +117,24 @@ async def startup_event():
     global telegram_config
     
     print("Запуск приложения...")
+    
+    # Initialize database
+    try:
+        await init_database()
+        print("База данных инициализирована")
+        
+        # Migrate from accounts.json if exists
+        migration_result = await migrate_from_json()
+        if migration_result['status'] == 'success':
+            print(f"Миграция завершена: {migration_result['migrated']} аккаунтов")
+        elif migration_result['status'] == 'error':
+            print(f"Ошибка миграции: {migration_result['message']}")
+    except Exception as e:
+        print(f"Ошибка инициализации БД: {e}")
+    
+    # Start subscriber background task
+    asyncio.create_task(process_subscription_queue())
+    print("Фоновая задача подписчика запущена")
     
     # Только загрузить config.json - БЕЗ подключения к Telegram
     if os.path.exists('config.json'):
@@ -743,11 +775,12 @@ async def test_proxy_connection(data: dict):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+
 @app.get("/api/accounts/list")
 async def get_accounts_list():
     """Get list of accounts with masked sensitive data"""
     try:
-        accounts = account_mgr.get_accounts_list(mask_sensitive=True)
+        accounts = await account_mgr.get_accounts_list(mask_sensitive=True)
         return {"accounts": accounts}
         
     except Exception as e:
@@ -778,6 +811,94 @@ async def delete_account(account_id: int):
 # END ACCOUNT MANAGEMENT API
 # ============================================
 
+
+
+
+# ============================================
+# SUBSCRIBER MODULE API ENDPOINTS
+# ============================================
+
+@app.post("/api/subscriber/add-tasks")
+async def add_subscription_tasks(request: ChannelListRequest):
+    """Add channels to subscription queue"""
+    try:
+        result = await add_channels_to_queue(request.channel_urls)
+        
+        if result['status'] == 'error':
+            raise HTTPException(status_code=400, detail=result['message'])
+        
+        return result
+        
+    except Exception as e:
+        print(f"Error adding subscription tasks: {e}")
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/subscriber/stats")
+async def get_subscriber_stats():
+    """Get subscription statistics"""
+    try:
+        stats = await get_subscription_stats()
+        return stats
+        
+    except Exception as e:
+        print(f"Error getting subscriber stats: {e}")
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/settings/limits")
+async def get_limits_settings():
+    """Get current subscription limits"""
+    try:
+        max_subs = await get_setting("max_subs_per_day", 20)
+        delay_min = await get_setting("delay_min_seconds", 30)
+        delay_max = await get_setting("delay_max_seconds", 120)
+        
+        return {
+            "max_subs_per_day": max_subs,
+            "delay_min_seconds": delay_min,
+            "delay_max_seconds": delay_max
+        }
+        
+    except Exception as e:
+        print(f"Error getting limits: {e}")
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/settings/limits")
+async def update_limits_settings(settings: LimitsSettings):
+    """Update subscription limits"""
+    try:
+        await set_setting("max_subs_per_day", settings.max_subs_per_day)
+        await set_setting("delay_min_seconds", settings.delay_min_seconds)
+        await set_setting("delay_max_seconds", settings.delay_max_seconds)
+        
+        return {"status": "success", "message": "Limits updated"}
+        
+    except Exception as e:
+        print(f"Error updating limits: {e}")
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+# ============================================
+# SPA ROUTING - Catch-all for page refreshes
+# ============================================
+
+@app.get("/{full_path:path}", response_class=HTMLResponse)
+async def catch_all(full_path: str):
+    """Catch-all route for SPA routing - returns layout.html for all non-API/static paths"""
+    # Ignore API and static paths
+    if full_path.startswith("api") or full_path.startswith("static") or full_path.startswith("pages"):
+        raise HTTPException(status_code=404)
+    
+    # All other paths (home, accounts, subscriber, etc.) return layout
+    with open("layout.html", "r", encoding="utf-8") as f:
+        return HTMLResponse(content=f.read(), status_code=200)
 
 
 if __name__ == "__main__":

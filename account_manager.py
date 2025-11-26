@@ -11,46 +11,36 @@ from telethon.errors import SessionPasswordNeededError, FloodWaitError
 import time
 import socket
 import socks
+from sqlmodel import select
 
-ACCOUNTS_FILE = 'accounts.json'
+from database import get_session, Account
+
 SESSIONS_DIR = 'sessions'
 
 class AccountManager:
     def __init__(self):
-        self.accounts = []
-        self.load_accounts()
-        
         # Create sessions directory if not exists
         if not os.path.exists(SESSIONS_DIR):
             os.makedirs(SESSIONS_DIR)
+        
+        # Temporary storage for pending auth sessions
+        self.pending_auths = {}
     
-    def load_accounts(self):
-        """Load accounts from accounts.json"""
-        if os.path.exists(ACCOUNTS_FILE):
-            try:
-                with open(ACCOUNTS_FILE, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                    self.accounts = data.get('accounts', [])
-            except Exception as e:
-                print(f"Error loading accounts: {e}")
-                self.accounts = []
-        else:
-            self.accounts = []
+    async def get_accounts_from_db(self) -> List[Account]:
+        """Get all accounts from database"""
+        async with get_session() as session:
+            result = await session.execute(select(Account))
+            return result.scalars().all()
     
-    def save_accounts(self):
-        """Save accounts to accounts.json"""
-        try:
-            with open(ACCOUNTS_FILE, 'w', encoding='utf-8') as f:
-                json.dump({'accounts': self.accounts}, f, ensure_ascii=False, indent=2)
-        except Exception as e:
-            print(f"Error saving accounts: {e}")
-            raise
-    
-    def get_next_id(self) -> int:
+    async def get_next_id(self) -> int:
         """Get next available account ID"""
-        if not self.accounts:
-            return 1
-        return max(acc['id'] for acc in self.accounts) + 1
+        async with get_session() as session:
+            result = await session.execute(select(Account))
+            accounts = result.scalars().all()
+            
+            if not accounts:
+                return 1
+            return max(acc.id for acc in accounts) + 1
     
     async def import_from_csv(self, csv_content: str, session_files: Dict[str, bytes]) -> Dict:
         """
@@ -88,9 +78,9 @@ class AccountManager:
                         continue
                     
                     # Parse proxy if provided
-                    proxy = None
+                    proxy_url = None
                     if row.get('proxy_host'):
-                        proxy = {
+                        proxy_data = {
                             'type': row.get('proxy_type', 'socks5'),
                             'host': row.get('proxy_host'),
                             'port': int(row.get('proxy_port', 1080)),
@@ -98,38 +88,37 @@ class AccountManager:
                             'password': row.get('proxy_pass', ''),
                             'status': 'unknown'
                         }
+                        proxy_url = json.dumps(proxy_data)
                     
                     # Save session file
                     session_path = os.path.join(SESSIONS_DIR, session_file)
                     with open(session_path, 'wb') as f:
                         f.write(session_files[session_file])
                     
-                    # Create account entry
-                    account = {
-                        'id': self.get_next_id(),
-                        'phone': phone,
-                        'api_id': api_id,
-                        'api_hash': api_hash,
-                        'session_file': session_path,
-                        'proxy': proxy,
-                        'status': 'active',
-                        'created_at': datetime.now().isoformat(),
-                        'last_active': None,
-                        'stats': {
-                            'comments_posted': 0,
-                            'tokens_used': 0
-                        }
-                    }
+                    # Create account entry in database
+                    async with get_session() as session:
+                        account = Account(
+                            phone=phone,
+                            api_id=api_id,
+                            api_hash=api_hash,
+                            session_file=session_path,
+                            proxy_url=proxy_url,
+                            status='active',
+                            created_at=datetime.now(),
+                            last_active=None,
+                            stats=json.dumps({
+                                'comments_posted': 0,
+                                'tokens_used': 0
+                            }),
+                            user_info=json.dumps({})
+                        )
+                        session.add(account)
+                        await session.commit()
                     
-                    self.accounts.append(account)
                     imported += 1
                     
                 except Exception as e:
                     errors.append(f"Row {row_num}: {str(e)}")
-            
-            # Save accounts
-            if imported > 0:
-                self.save_accounts()
             
             return {
                 'imported': imported,
@@ -239,7 +228,7 @@ class AccountManager:
             {status: 'code_sent', account_id: int}
         """
         try:
-            account_id = self.get_next_id()
+            account_id = await self.get_next_id()
             session_name = f"account_{phone.replace('+', '')}"
             session_path = os.path.join(SESSIONS_DIR, f"{session_name}.session")
             
@@ -280,9 +269,7 @@ class AccountManager:
                 'status': 'pending_code'
             }
             
-            # Store in memory (not in accounts list yet)
-            if not hasattr(self, 'pending_auths'):
-                self.pending_auths = {}
+            # Store in memory (not in database yet)
             self.pending_auths[account_id] = temp_account
             
             return {
@@ -309,7 +296,7 @@ class AccountManager:
             {status: 'success'/'need_2fa'/'error'}
         """
         try:
-            if not hasattr(self, 'pending_auths') or account_id not in self.pending_auths:
+            if account_id not in self.pending_auths:
                 return {'status': 'error', 'error': 'Auth session not found'}
             
             temp_account = self.pending_auths[account_id]
@@ -318,37 +305,57 @@ class AccountManager:
             try:
                 await client.sign_in(temp_account['phone'], code)
                 
-                # Success - save account
+                # Success - save account to database
                 me = await client.get_me()
                 
-                account = {
-                    'id': temp_account['id'],
-                    'phone': temp_account['phone'],
-                    'api_id': temp_account['api_id'],
-                    'api_hash': temp_account['api_hash'],
-                    'session_file': temp_account['session_file'],
-                    'proxy': temp_account['proxy'],
-                    'status': 'active',
-                    'created_at': datetime.now().isoformat(),
-                    'last_active': datetime.now().isoformat(),
-                    'stats': {
-                        'comments_posted': 0,
-                        'tokens_used': 0
-                    },
-                    'user_info': {
-                        'first_name': me.first_name,
-                        'last_name': me.last_name,
-                        'username': me.username
-                    }
-                }
+                # Prepare proxy URL
+                proxy_url = None
+                if temp_account['proxy']:
+                    proxy_url = json.dumps(temp_account['proxy'])
                 
-                self.accounts.append(account)
-                self.save_accounts()
+                async with get_session() as session:
+                    account = Account(
+                        phone=temp_account['phone'],
+                        api_id=temp_account['api_id'],
+                        api_hash=temp_account['api_hash'],
+                        session_file=temp_account['session_file'],
+                        proxy_url=proxy_url,
+                        status='active',
+                        created_at=datetime.now(),
+                        last_active=datetime.now(),
+                        stats=json.dumps({
+                            'comments_posted': 0,
+                            'tokens_used': 0
+                        }),
+                        user_info=json.dumps({
+                            'first_name': me.first_name,
+                            'last_name': me.last_name,
+                            'username': me.username
+                        })
+                    )
+                    session.add(account)
+                    await session.commit()
+                    await session.refresh(account)
+                    
+                    # Convert to dict for response
+                    account_dict = {
+                        'id': account.id,
+                        'phone': account.phone,
+                        'api_id': account.api_id,
+                        'api_hash': account.api_hash,
+                        'session_file': account.session_file,
+                        'proxy': json.loads(account.proxy_url) if account.proxy_url else None,
+                        'status': account.status,
+                        'created_at': account.created_at.isoformat(),
+                        'last_active': account.last_active.isoformat() if account.last_active else None,
+                        'stats': json.loads(account.stats),
+                        'user_info': json.loads(account.user_info)
+                    }
                 
                 await client.disconnect()
                 del self.pending_auths[account_id]
                 
-                return {'status': 'success', 'account': account}
+                return {'status': 'success', 'account': account_dict}
                 
             except SessionPasswordNeededError:
                 # Need 2FA password
@@ -366,7 +373,7 @@ class AccountManager:
             {status: 'success'/'error'}
         """
         try:
-            if not hasattr(self, 'pending_auths') or account_id not in self.pending_auths:
+            if account_id not in self.pending_auths:
                 return {'status': 'error', 'error': 'Auth session not found'}
             
             temp_account = self.pending_auths[account_id]
@@ -374,88 +381,121 @@ class AccountManager:
             
             await client.sign_in(password=password)
             
-            # Success - save account
+            # Success - save account to database
             me = await client.get_me()
             
-            account = {
-                'id': temp_account['id'],
-                'phone': temp_account['phone'],
-                'api_id': temp_account['api_id'],
-                'api_hash': temp_account['api_hash'],
-                'session_file': temp_account['session_file'],
-                'proxy': temp_account['proxy'],
-                'status': 'active',
-                'created_at': datetime.now().isoformat(),
-                'last_active': datetime.now().isoformat(),
-                'stats': {
-                    'comments_posted': 0,
-                    'tokens_used': 0
-                },
-                'user_info': {
-                    'first_name': me.first_name,
-                    'last_name': me.last_name,
-                    'username': me.username
-                }
-            }
+            # Prepare proxy URL
+            proxy_url = None
+            if temp_account['proxy']:
+                proxy_url = json.dumps(temp_account['proxy'])
             
-            self.accounts.append(account)
-            self.save_accounts()
+            async with get_session() as session:
+                account = Account(
+                    phone=temp_account['phone'],
+                    api_id=temp_account['api_id'],
+                    api_hash=temp_account['api_hash'],
+                    session_file=temp_account['session_file'],
+                    proxy_url=proxy_url,
+                    status='active',
+                    created_at=datetime.now(),
+                    last_active=datetime.now(),
+                    stats=json.dumps({
+                        'comments_posted': 0,
+                        'tokens_used': 0
+                    }),
+                    user_info=json.dumps({
+                        'first_name': me.first_name,
+                        'last_name': me.last_name,
+                        'username': me.username
+                    })
+                )
+                session.add(account)
+                await session.commit()
+                await session.refresh(account)
+                
+                # Convert to dict for response
+                account_dict = {
+                    'id': account.id,
+                    'phone': account.phone,
+                    'api_id': account.api_id,
+                    'api_hash': account.api_hash,
+                    'session_file': account.session_file,
+                    'proxy': json.loads(account.proxy_url) if account.proxy_url else None,
+                    'status': account.status,
+                    'created_at': account.created_at.isoformat(),
+                    'last_active': account.last_active.isoformat() if account.last_active else None,
+                    'stats': json.loads(account.stats),
+                    'user_info': json.loads(account.user_info)
+                }
             
             await client.disconnect()
             del self.pending_auths[account_id]
             
-            return {'status': 'success', 'account': account}
+            return {'status': 'success', 'account': account_dict}
             
         except Exception as e:
             return {'status': 'error', 'error': str(e)}
     
-    def get_accounts_list(self, mask_sensitive: bool = True) -> List[Dict]:
+    async def get_accounts_list(self, mask_sensitive: bool = True) -> List[Dict]:
         """
         Get list of accounts with optional data masking
         """
-        if not mask_sensitive:
-            return self.accounts
+        async with get_session() as session:
+            result = await session.execute(select(Account))
+            accounts = result.scalars().all()
         
-        # Mask sensitive data
-        masked_accounts = []
-        for acc in self.accounts:
-            masked = acc.copy()
+        accounts_list = []
+        for acc in accounts:
+            account_dict = {
+                'id': acc.id,
+                'phone': acc.phone,
+                'api_id': acc.api_id,
+                'api_hash': acc.api_hash,
+                'session_file': acc.session_file,
+                'proxy': json.loads(acc.proxy_url) if acc.proxy_url else None,
+                'status': acc.status,
+                'created_at': acc.created_at.isoformat(),
+                'last_active': acc.last_active.isoformat() if acc.last_active else None,
+                'stats': json.loads(acc.stats),
+                'user_info': json.loads(acc.user_info)
+            }
             
-            # Mask phone
-            phone = acc['phone']
-            if len(phone) > 7:
-                masked['phone'] = phone[:5] + '****' + phone[-3:]
+            if mask_sensitive:
+                # Mask phone
+                phone = account_dict['phone']
+                if len(phone) > 7:
+                    account_dict['phone'] = phone[:5] + '****' + phone[-3:]
+                
+                # Mask api_hash
+                api_hash = account_dict['api_hash']
+                if len(api_hash) > 8:
+                    account_dict['api_hash'] = api_hash[:6] + '******' + api_hash[-4:]
+                
+                # Mask proxy password
+                if account_dict.get('proxy') and account_dict['proxy'].get('password'):
+                    account_dict['proxy']['password'] = '****'
             
-            # Mask api_hash
-            api_hash = acc['api_hash']
-            if len(api_hash) > 8:
-                masked['api_hash'] = api_hash[:6] + '******' + api_hash[-4:]
-            
-            # Mask proxy password
-            if acc.get('proxy') and acc['proxy'].get('password'):
-                masked['proxy'] = acc['proxy'].copy()
-                masked['proxy']['password'] = '****'
-            
-            masked_accounts.append(masked)
+            accounts_list.append(account_dict)
         
-        return masked_accounts
+        return accounts_list
     
     async def delete_account(self, account_id: int) -> bool:
         """
         Delete account and its session file
         """
         try:
-            account = next((acc for acc in self.accounts if acc['id'] == account_id), None)
-            if not account:
-                return False
-            
-            # Delete session file
-            if os.path.exists(account['session_file']):
-                os.remove(account['session_file'])
-            
-            # Remove from list
-            self.accounts = [acc for acc in self.accounts if acc['id'] != account_id]
-            self.save_accounts()
+            async with get_session() as session:
+                account = await session.get(Account, account_id)
+                if not account:
+                    return False
+                
+                # Delete session file
+                if os.path.exists(account.session_file):
+                    os.remove(account.session_file)
+                
+                # Delete from database
+                await session.delete(account)
+                await session.commit()
             
             return True
             

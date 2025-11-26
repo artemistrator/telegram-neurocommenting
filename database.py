@@ -1,0 +1,281 @@
+import os
+import json
+import shutil
+from datetime import datetime
+from typing import Optional, List, Dict, Any, AsyncGenerator
+from contextlib import asynccontextmanager
+
+from sqlmodel import SQLModel, Field, create_engine, Session, select, Column, JSON
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
+from sqlalchemy.orm import sessionmaker
+
+# Database file
+DATABASE_FILE = "app.db"
+DATABASE_URL = f"sqlite+aiosqlite:///{DATABASE_FILE}"
+
+# Global engine and session maker
+async_engine = None
+async_session_maker = None
+
+
+# ============================================
+# MODELS
+# ============================================
+
+class Account(SQLModel, table=True):
+    """Account model for storing Telegram account credentials"""
+    __tablename__ = "accounts"
+    
+    id: Optional[int] = Field(default=None, primary_key=True)
+    phone: str = Field(index=True)
+    api_id: str
+    api_hash: str
+    session_file: str
+    proxy_url: Optional[str] = None  # JSON string for proxy config
+    status: str = Field(default="active")  # active, inactive, banned
+    created_at: datetime = Field(default_factory=datetime.now)
+    last_active: Optional[datetime] = None
+    stats: str = Field(default="{}", sa_column=Column(JSON))  # JSON for stats
+    user_info: str = Field(default="{}", sa_column=Column(JSON))  # JSON for user info
+
+
+class SubscriptionTask(SQLModel, table=True):
+    """Subscription task queue"""
+    __tablename__ = "subscription_tasks"
+    
+    id: Optional[int] = Field(default=None, primary_key=True)
+    account_id: int = Field(foreign_key="accounts.id", index=True)
+    channel_url: str
+    status: str = Field(default="pending", index=True)  # pending, processing, done, error
+    created_at: datetime = Field(default_factory=datetime.now)
+    processed_at: Optional[datetime] = None
+    error_message: Optional[str] = None
+
+
+class GlobalSettings(SQLModel, table=True):
+    """Global application settings"""
+    __tablename__ = "global_settings"
+    
+    id: Optional[int] = Field(default=None, primary_key=True)
+    key: str = Field(unique=True, index=True)
+    value: str = Field(sa_column=Column(JSON))  # JSON value
+    updated_at: datetime = Field(default_factory=datetime.now)
+
+
+# ============================================
+# DATABASE INITIALIZATION
+# ============================================
+
+async def init_database():
+    """Initialize database and create tables"""
+    global async_engine, async_session_maker
+    
+    print(f"Initializing database: {DATABASE_FILE}")
+    
+    # Create async engine
+    async_engine = create_async_engine(
+        DATABASE_URL,
+        echo=False,
+        connect_args={"check_same_thread": False}
+    )
+    
+    # Create session maker
+    async_session_maker = async_sessionmaker(
+        async_engine,
+        class_=AsyncSession,
+        expire_on_commit=False
+    )
+    
+    # Create tables
+    async with async_engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.create_all)
+    
+    print("Database initialized successfully")
+    
+    # Initialize default settings if not exist
+    await init_default_settings()
+
+
+async def init_default_settings():
+    """Initialize default global settings"""
+    default_settings = {
+        "max_subs_per_day": 20,
+        "delay_min_seconds": 30,
+        "delay_max_seconds": 120,
+        "subscriber_enabled": True
+    }
+    
+    async with get_session() as session:
+        for key, value in default_settings.items():
+            # Check if setting exists
+            result = await session.execute(
+                select(GlobalSettings).where(GlobalSettings.key == key)
+            )
+            existing = result.scalar_one_or_none()
+            
+            if not existing:
+                setting = GlobalSettings(
+                    key=key,
+                    value=json.dumps(value)
+                )
+                session.add(setting)
+        
+        await session.commit()
+    
+    print("Default settings initialized")
+
+
+@asynccontextmanager
+async def get_session() -> AsyncGenerator[AsyncSession, None]:
+    """Get async database session"""
+    if not async_session_maker:
+        raise RuntimeError("Database not initialized. Call init_database() first.")
+    
+    async with async_session_maker() as session:
+        try:
+            yield session
+        except Exception:
+            await session.rollback()
+            raise
+        finally:
+            await session.close()
+
+
+# ============================================
+# MIGRATION FROM JSON
+# ============================================
+
+async def migrate_from_json(json_file: str = "accounts.json") -> Dict[str, Any]:
+    """
+    Migrate accounts from JSON file to database
+    
+    Args:
+        json_file: Path to accounts.json
+    
+    Returns:
+        Migration result dict
+    """
+    if not os.path.exists(json_file):
+        return {
+            "status": "skipped",
+            "message": "No accounts.json found"
+        }
+    
+    print(f"Starting migration from {json_file}...")
+    
+    try:
+        # Read JSON file
+        with open(json_file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        
+        accounts_data = data.get('accounts', [])
+        
+        if not accounts_data:
+            print("No accounts to migrate")
+            return {
+                "status": "skipped",
+                "message": "No accounts in JSON file"
+            }
+        
+        # Check if database already has accounts
+        async with get_session() as session:
+            result = await session.execute(select(Account))
+            existing_accounts = result.scalars().all()
+            
+            if existing_accounts:
+                print("Database already has accounts, skipping migration")
+                return {
+                    "status": "skipped",
+                    "message": "Database already contains accounts"
+                }
+        
+        # Migrate accounts
+        migrated_count = 0
+        async with get_session() as session:
+            for acc_data in accounts_data:
+                # Convert proxy dict to JSON string if exists
+                proxy_url = None
+                if acc_data.get('proxy'):
+                    proxy_url = json.dumps(acc_data['proxy'])
+                
+                # Convert stats to JSON string
+                stats = json.dumps(acc_data.get('stats', {}))
+                user_info = json.dumps(acc_data.get('user_info', {}))
+                
+                # Create Account model
+                account = Account(
+                    id=acc_data.get('id'),
+                    phone=acc_data['phone'],
+                    api_id=str(acc_data['api_id']),
+                    api_hash=acc_data['api_hash'],
+                    session_file=acc_data['session_file'],
+                    proxy_url=proxy_url,
+                    status=acc_data.get('status', 'active'),
+                    created_at=datetime.fromisoformat(acc_data['created_at']) if acc_data.get('created_at') else datetime.now(),
+                    last_active=datetime.fromisoformat(acc_data['last_active']) if acc_data.get('last_active') else None,
+                    stats=stats,
+                    user_info=user_info
+                )
+                
+                session.add(account)
+                migrated_count += 1
+            
+            await session.commit()
+        
+        # Backup original JSON file
+        backup_file = f"{json_file}.bak"
+        shutil.copy2(json_file, backup_file)
+        print(f"Backed up {json_file} to {backup_file}")
+        
+        print(f"Successfully migrated {migrated_count} accounts")
+        
+        return {
+            "status": "success",
+            "migrated": migrated_count,
+            "backup_file": backup_file
+        }
+        
+    except Exception as e:
+        print(f"Migration error: {e}")
+        return {
+            "status": "error",
+            "message": str(e)
+        }
+
+
+# ============================================
+# HELPER FUNCTIONS
+# ============================================
+
+async def get_setting(key: str, default: Any = None) -> Any:
+    """Get global setting value"""
+    async with get_session() as session:
+        result = await session.execute(
+            select(GlobalSettings).where(GlobalSettings.key == key)
+        )
+        setting = result.scalar_one_or_none()
+        
+        if setting:
+            return json.loads(setting.value)
+        return default
+
+
+async def set_setting(key: str, value: Any):
+    """Set global setting value"""
+    async with get_session() as session:
+        result = await session.execute(
+            select(GlobalSettings).where(GlobalSettings.key == key)
+        )
+        setting = result.scalar_one_or_none()
+        
+        if setting:
+            setting.value = json.dumps(value)
+            setting.updated_at = datetime.now()
+        else:
+            setting = GlobalSettings(
+                key=key,
+                value=json.dumps(value)
+            )
+            session.add(setting)
+        
+        await session.commit()

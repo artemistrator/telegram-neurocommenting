@@ -1,0 +1,357 @@
+import asyncio
+import random
+from datetime import datetime, timedelta
+from typing import List, Dict, Optional
+from telethon import TelegramClient, functions
+from telethon.errors import FloodWaitError, ChannelPrivateError, UsernameInvalidError
+from sqlmodel import select, func
+import json
+
+from database import (
+    get_session, Account, SubscriptionTask, 
+    get_setting, set_setting
+)
+
+
+# ============================================
+# SUBSCRIBER LOGIC
+# ============================================
+
+async def add_channels_to_queue(channel_urls: List[str]) -> Dict:
+    """
+    Add channels to subscription queue with load balancing
+    
+    Args:
+        channel_urls: List of channel URLs or usernames
+    
+    Returns:
+        Distribution summary
+    """
+    if not channel_urls:
+        return {
+            "status": "error",
+            "message": "No channels provided"
+        }
+    
+    # Get active accounts
+    async with get_session() as session:
+        result = await session.execute(
+            select(Account).where(Account.status == "active")
+        )
+        active_accounts = result.scalars().all()
+    
+    if not active_accounts:
+        return {
+            "status": "error",
+            "message": "No active accounts available"
+        }
+    
+    # Load balancing: distribute channels evenly using round-robin
+    distribution = {}
+    tasks_created = []
+    
+    async with get_session() as session:
+        for idx, channel_url in enumerate(channel_urls):
+            # Round-robin distribution
+            account = active_accounts[idx % len(active_accounts)]
+            
+            # Create subscription task
+            task = SubscriptionTask(
+                account_id=account.id,
+                channel_url=channel_url.strip(),
+                status="pending"
+            )
+            session.add(task)
+            tasks_created.append(task)
+            
+            # Track distribution
+            if account.id not in distribution:
+                distribution[account.id] = {
+                    "phone": account.phone,
+                    "count": 0
+                }
+            distribution[account.id]["count"] += 1
+        
+        await session.commit()
+    
+    return {
+        "status": "success",
+        "total_channels": len(channel_urls),
+        "total_accounts": len(active_accounts),
+        "distribution": distribution,
+        "tasks_created": len(tasks_created)
+    }
+
+
+async def process_subscription_queue():
+    """
+    Background task to process subscription queue
+    Runs continuously and processes pending tasks
+    """
+    print("Subscription queue processor started")
+    
+    while True:
+        try:
+            # Get settings
+            max_subs_per_day = await get_setting("max_subs_per_day", 20)
+            delay_min = await get_setting("delay_min_seconds", 30)
+            delay_max = await get_setting("delay_max_seconds", 120)
+            subscriber_enabled = await get_setting("subscriber_enabled", True)
+            
+            if not subscriber_enabled:
+                await asyncio.sleep(10)
+                continue
+            
+            # Get pending tasks
+            async with get_session() as session:
+                result = await session.execute(
+                    select(SubscriptionTask)
+                    .where(SubscriptionTask.status == "pending")
+                    .limit(10)  # Process in batches
+                )
+                pending_tasks = result.scalars().all()
+            
+            if not pending_tasks:
+                # No tasks, sleep and continue
+                await asyncio.sleep(5)
+                continue
+            
+            # Process each task
+            for task in pending_tasks:
+                try:
+                    # Check if account hit daily limit
+                    if await is_account_rate_limited(task.account_id, max_subs_per_day):
+                        print(f"Account {task.account_id} hit daily limit, skipping")
+                        continue
+                    
+                    # Mark as processing
+                    async with get_session() as session:
+                        task_to_update = await session.get(SubscriptionTask, task.id)
+                        task_to_update.status = "processing"
+                        await session.commit()
+                    
+                    # Execute subscription
+                    success, error_msg = await subscribe_to_channel(
+                        task.account_id,
+                        task.channel_url
+                    )
+                    
+                    # Update task status
+                    async with get_session() as session:
+                        task_to_update = await session.get(SubscriptionTask, task.id)
+                        if success:
+                            task_to_update.status = "done"
+                            task_to_update.processed_at = datetime.now()
+                        else:
+                            task_to_update.status = "error"
+                            task_to_update.error_message = error_msg
+                            task_to_update.processed_at = datetime.now()
+                        await session.commit()
+                    
+                    # Random delay between actions
+                    delay = random.randint(delay_min, delay_max)
+                    print(f"Task {task.id} completed, sleeping {delay}s")
+                    await asyncio.sleep(delay)
+                    
+                except Exception as e:
+                    print(f"Error processing task {task.id}: {e}")
+                    # Mark as error
+                    async with get_session() as session:
+                        task_to_update = await session.get(SubscriptionTask, task.id)
+                        task_to_update.status = "error"
+                        task_to_update.error_message = str(e)
+                        task_to_update.processed_at = datetime.now()
+                        await session.commit()
+            
+        except Exception as e:
+            print(f"Error in subscription queue processor: {e}")
+            await asyncio.sleep(10)
+
+
+async def is_account_rate_limited(account_id: int, max_per_day: int) -> bool:
+    """
+    Check if account has hit daily subscription limit
+    
+    Args:
+        account_id: Account ID
+        max_per_day: Maximum subscriptions per day
+    
+    Returns:
+        True if rate limited, False otherwise
+    """
+    # Get tasks completed in last 24 hours
+    since = datetime.now() - timedelta(days=1)
+    
+    async with get_session() as session:
+        result = await session.execute(
+            select(func.count(SubscriptionTask.id))
+            .where(
+                SubscriptionTask.account_id == account_id,
+                SubscriptionTask.status == "done",
+                SubscriptionTask.processed_at >= since
+            )
+        )
+        count = result.scalar()
+    
+    return count >= max_per_day
+
+
+async def subscribe_to_channel(account_id: int, channel_url: str) -> tuple[bool, Optional[str]]:
+    """
+    Subscribe to a channel using specified account
+    
+    Args:
+        account_id: Account ID to use
+        channel_url: Channel URL or username
+    
+    Returns:
+        (success: bool, error_message: Optional[str])
+    """
+    client = None
+    try:
+        # Get account from database
+        async with get_session() as session:
+            account = await session.get(Account, account_id)
+            if not account:
+                return False, "Account not found"
+        
+        # Parse proxy if exists
+        proxy = None
+        if account.proxy_url:
+            try:
+                proxy_data = json.loads(account.proxy_url)
+                proxy = (
+                    proxy_data.get('type', 'socks5'),
+                    proxy_data.get('host'),
+                    int(proxy_data.get('port', 1080)),
+                    True,  # rdns
+                    proxy_data.get('username'),
+                    proxy_data.get('password')
+                )
+            except Exception as e:
+                print(f"Error parsing proxy: {e}")
+        
+        # Create Telegram client
+        client = TelegramClient(
+            account.session_file.replace('.session', ''),
+            int(account.api_id),
+            account.api_hash,
+            proxy=proxy
+        )
+        
+        await client.connect()
+        
+        if not await client.is_user_authorized():
+            return False, "Account not authorized"
+        
+        # Clean channel URL
+        channel = channel_url.strip()
+        if channel.startswith('https://t.me/'):
+            channel = channel.replace('https://t.me/', '')
+        elif channel.startswith('@'):
+            channel = channel[1:]
+        
+        # Join channel
+        try:
+            await client(functions.channels.JoinChannelRequest(channel))
+            print(f"Successfully joined {channel} with account {account.phone}")
+            
+            # Update last_active
+            async with get_session() as session:
+                acc = await session.get(Account, account_id)
+                acc.last_active = datetime.now()
+                await session.commit()
+            
+            return True, None
+            
+        except FloodWaitError as e:
+            error_msg = f"Flood wait: {e.seconds} seconds"
+            print(error_msg)
+            return False, error_msg
+            
+        except ChannelPrivateError:
+            error_msg = "Channel is private"
+            print(error_msg)
+            return False, error_msg
+            
+        except UsernameInvalidError:
+            error_msg = "Invalid channel username"
+            print(error_msg)
+            return False, error_msg
+        
+    except Exception as e:
+        error_msg = str(e)
+        print(f"Error subscribing to {channel_url}: {error_msg}")
+        return False, error_msg
+        
+    finally:
+        if client:
+            try:
+                await client.disconnect()
+            except:
+                pass
+
+
+async def get_subscription_stats() -> Dict:
+    """
+    Get subscription statistics
+    
+    Returns:
+        Stats dictionary
+    """
+    async with get_session() as session:
+        # Count by status
+        pending_result = await session.execute(
+            select(func.count(SubscriptionTask.id))
+            .where(SubscriptionTask.status == "pending")
+        )
+        pending = pending_result.scalar()
+        
+        processing_result = await session.execute(
+            select(func.count(SubscriptionTask.id))
+            .where(SubscriptionTask.status == "processing")
+        )
+        processing = processing_result.scalar()
+        
+        done_result = await session.execute(
+            select(func.count(SubscriptionTask.id))
+            .where(SubscriptionTask.status == "done")
+        )
+        done = done_result.scalar()
+        
+        error_result = await session.execute(
+            select(func.count(SubscriptionTask.id))
+            .where(SubscriptionTask.status == "error")
+        )
+        errors = error_result.scalar()
+        
+        # Get recent tasks (last 50)
+        tasks_result = await session.execute(
+            select(SubscriptionTask)
+            .order_by(SubscriptionTask.created_at.desc())
+            .limit(50)
+        )
+        recent_tasks = tasks_result.scalars().all()
+        
+        # Get account info for tasks
+        tasks_with_accounts = []
+        for task in recent_tasks:
+            account = await session.get(Account, task.account_id)
+            tasks_with_accounts.append({
+                "id": task.id,
+                "account_phone": account.phone if account else "Unknown",
+                "channel_url": task.channel_url,
+                "status": task.status,
+                "created_at": task.created_at.isoformat(),
+                "processed_at": task.processed_at.isoformat() if task.processed_at else None,
+                "error_message": task.error_message
+            })
+    
+    return {
+        "pending": pending,
+        "processing": processing,
+        "done": done,
+        "errors": errors,
+        "total": pending + processing + done + errors,
+        "recent_tasks": tasks_with_accounts
+    }

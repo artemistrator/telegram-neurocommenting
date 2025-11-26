@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Автоподписка</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 16px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .card h2 {
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: 'Courier New', monospace;
+            resize: vertical;
+            transition: border-color 0.3s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .setting-item label {
+            display: block;
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+
+        .setting-item input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .setting-item input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            color: white;
+        }
+
+        .stat-value {
+            font-size: 36px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .task-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .task-table th,
+        .task-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .task-table th {
+            background: #f8f9fa;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .task-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-pending {
+            background: #ffc107;
+            color: #000;
+        }
+
+        .status-processing {
+            background: #17a2b8;
+            color: #fff;
+        }
+
+        .status-done {
+            background: #28a745;
+            color: #fff;
+        }
+
+        .status-error {
+            background: #dc3545;
+            color: #fff;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Автоподписка</h1>
+            <p>Автоматическая подписка на каналы с умным распределением нагрузки</p>
+        </div>
+
+        <!-- Alert Messages -->
+        <div id="alertContainer"></div>
+
+        <!-- Statistics -->
+        <div class="card">
+            <h2>📊 Статистика</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="statPending">0</div>
+                    <div class="stat-label">В очереди</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statProcessing">0</div>
+                    <div class="stat-label">Обрабатывается</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statDone">0</div>
+                    <div class="stat-label">Выполнено</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statErrors">0</div>
+                    <div class="stat-label">Ошибки</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings -->
+        <div class="card">
+            <h2>⚙️ Настройки лимитов</h2>
+            <div class="settings-grid">
+                <div class="setting-item">
+                    <label>Макс. подписок в день:</label>
+                    <input type="number" id="maxSubsPerDay" value="20" min="1" max="100">
+                </div>
+                <div class="setting-item">
+                    <label>Мин. задержка (сек):</label>
+                    <input type="number" id="delayMin" value="30" min="10" max="300">
+                </div>
+                <div class="setting-item">
+                    <label>Макс. задержка (сек):</label>
+                    <input type="number" id="delayMax" value="120" min="30" max="600">
+                </div>
+            </div>
+            <button class="btn btn-secondary" onclick="saveSettings()">Сохранить настройки</button>
+        </div>
+
+        <!-- Add Channels -->
+        <div class="card">
+            <h2>➕ Добавить каналы</h2>
+            <div class="form-group">
+                <label>Список каналов (по одному на строку):</label>
+                <textarea id="channelList" rows="8"
+                    placeholder="https://t.me/channel1&#10;@channel2&#10;channel3"></textarea>
+            </div>
+            <button class="btn btn-primary" onclick="addChannels()">
+                <span id="addBtnText">Запустить автоподписку</span>
+                <span id="addBtnLoading" class="loading hidden"></span>
+            </button>
+        </div>
+
+        <!-- Task Log -->
+        <div class="card">
+            <h2>📋 Лог задач</h2>
+            <table class="task-table">
+                <thead>
+                    <tr>
+                        <th>Аккаунт</th>
+                        <th>Канал</th>
+                        <th>Статус</th>
+                        <th>Время</th>
+                        <th>Ошибка</th>
+                    </tr>
+                </thead>
+                <tbody id="taskTableBody">
+                    <tr>
+                        <td colspan="5" style="text-align: center; color: #999;">Нет задач</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Auto-refresh stats every 5 seconds
+        setInterval(loadStats, 5000);
+
+        // Load initial data
+        loadSettings();
+        loadStats();
+
+        function showAlert(message, type = 'success') {
+            const alertContainer = document.getElementById('alertContainer');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            alertContainer.appendChild(alert);
+
+            setTimeout(() => {
+                alert.remove();
+            }, 5000);
+        }
+
+        async function loadSettings() {
+            try {
+                const response = await fetch('/api/settings/limits');
+                const data = await response.json();
+
+                document.getElementById('maxSubsPerDay').value = data.max_subs_per_day;
+                document.getElementById('delayMin').value = data.delay_min_seconds;
+                document.getElementById('delayMax').value = data.delay_max_seconds;
+            } catch (error) {
+                console.error('Error loading settings:', error);
+            }
+        }
+
+        async function saveSettings() {
+            try {
+                const settings = {
+                    max_subs_per_day: parseInt(document.getElementById('maxSubsPerDay').value),
+                    delay_min_seconds: parseInt(document.getElementById('delayMin').value),
+                    delay_max_seconds: parseInt(document.getElementById('delayMax').value)
+                };
+
+                const response = await fetch('/api/settings/limits', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(settings)
+                });
+
+                if (response.ok) {
+                    showAlert('Настройки сохранены', 'success');
+                } else {
+                    showAlert('Ошибка сохранения настроек', 'error');
+                }
+            } catch (error) {
+                console.error('Error saving settings:', error);
+                showAlert('Ошибка сохранения настроек', 'error');
+            }
+        }
+
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/subscriber/stats');
+                const data = await response.json();
+
+                document.getElementById('statPending').textContent = data.pending;
+                document.getElementById('statProcessing').textContent = data.processing;
+                document.getElementById('statDone').textContent = data.done;
+                document.getElementById('statErrors').textContent = data.errors;
+
+                // Update task table
+                const tbody = document.getElementById('taskTableBody');
+                tbody.innerHTML = '';
+
+                if (data.recent_tasks && data.recent_tasks.length > 0) {
+                    data.recent_tasks.forEach(task => {
+                        const row = tbody.insertRow();
+                        row.innerHTML = `
+                            <td>${task.account_phone}</td>
+                            <td>${task.channel_url}</td>
+                            <td><span class="status-badge status-${task.status}">${task.status}</span></td>
+                            <td>${new Date(task.created_at).toLocaleString('ru-RU')}</td>
+                            <td>${task.error_message || '-'}</td>
+                        `;
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #999;">Нет задач</td></tr>';
+                }
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        async function addChannels() {
+            const channelList = document.getElementById('channelList').value.trim();
+
+            if (!channelList) {
+                showAlert('Введите список каналов', 'error');
+                return;
+            }
+
+            const channels = channelList.split('\n').map(c => c.trim()).filter(c => c);
+
+            if (channels.length === 0) {
+                showAlert('Введите хотя бы один канал', 'error');
+                return;
+            }
+
+            // Show loading
+            document.getElementById('addBtnText').classList.add('hidden');
+            document.getElementById('addBtnLoading').classList.remove('hidden');
+
+            try {
+                const response = await fetch('/api/subscriber/add-tasks', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        channel_urls: channels
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showAlert(`Добавлено ${data.tasks_created} задач на ${data.total_accounts} аккаунтов`, 'success');
+                    document.getElementById('channelList').value = '';
+                    loadStats();
+                } else {
+                    showAlert(data.detail || 'Ошибка добавления задач', 'error');
+                }
+            } catch (error) {
+                console.error('Error adding channels:', error);
+                showAlert('Ошибка добавления задач', 'error');
+            } finally {
+                // Hide loading
+                document.getElementById('addBtnText').classList.remove('hidden');
+                document.getElementById('addBtnLoading').classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+
+</html>
