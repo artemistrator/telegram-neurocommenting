@@ -1,11 +1,47 @@
-.venv/
+# Python & Venv
 __pycache__/
 *.pyc
-.env
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+.coverage
+htmlcov/
+
+# IDEs
 .idea/
 .vscode/
+*.swp
+
+# Environment Variables & Secrets (CRITICAL)
+.env
+.env.local
+.env.*
+config.json
+
+# Telegram Sessions (CRITICAL)
 *.session
 *.session-journal
-config.json
-telegram_session.session
-telegram_session.session-journal
+*.zip
+
+# Logs
+logs/
+*.log
+
+# Docker Volumes & Database Data
+postgres_data/
+redis_data/
+directus/uploads/*
+!directus/uploads/.gitkeep
+directus/extensions/*
+!directus/extensions/.gitkeep
+directus/database/
+app.db
+
+# OS specific
+.DS_Store
+Thumbs.db

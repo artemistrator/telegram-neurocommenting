@@ -1,0 +1,141 @@
+﻿services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: neurocomment-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: neurocomment
+      POSTGRES_PASSWORD: Fh6YtNNmR76
+      POSTGRES_DB: neurocomment_db
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - neurocomment-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U neurocomment -d neurocomment_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    container_name: neurocomment-redis
+    restart: unless-stopped
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - neurocomment-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  directus:
+    image: directus/directus:11
+    container_name: neurocomment-directus
+    restart: unless-stopped
+    ports:
+      - "8055:8055"
+    volumes:
+      - directus_uploads:/directus/uploads
+      - directus_extensions:/directus/extensions
+    networks:
+      - neurocomment-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SECRET: "nD73lI5pZ59j05O/EToG+boueBY1CBIoroAZ4al2MW4="
+      ADMIN_EMAIL: "admin@neurocomment.local"
+      ADMIN_PASSWORD: "Fh6YtNNmR76"
+      
+      DB_CLIENT: "pg"
+      DB_HOST: "postgres"
+      DB_PORT: "5432"
+      DB_DATABASE: "neurocomment_db"
+      DB_USER: "neurocomment"
+      DB_PASSWORD: "Fh6YtNNmR76"
+      
+      CACHE_ENABLED: "false"
+      
+      WEBSOCKETS_ENABLED: "true"
+      
+      PUBLIC_URL: "http://localhost:8055"
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: neurocomment-backend
+    restart: unless-stopped
+    ports:
+      - "8888:8000"
+    volumes:
+      - .:/app
+    networks:
+      - neurocomment-network
+    depends_on:
+      directus:
+        condition: service_started
+    environment:
+      PYTHONUNBUFFERED: "1"
+      DIRECTUS_PUBLIC_URL: "http://directus:8055"
+    command: uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
+
+  health-checker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    container_name: neurocomment-health-checker
+    restart: unless-stopped
+    volumes:
+      - ./backend:/app/backend
+      - ./.env:/app/.env
+    networks:
+      - neurocomment-network
+    depends_on:
+      directus:
+        condition: service_started
+    environment:
+      PYTHONUNBUFFERED: "1"
+      DIRECTUS_PUBLIC_URL: "http://directus:8055"
+    command: python -m backend.workers.account_health_checker
+
+  listener:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    container_name: neurocomment-listener
+    restart: unless-stopped
+    volumes:
+      - ./backend:/app/backend
+      - ./.env:/app/.env
+    networks:
+      - neurocomment-network
+    depends_on:
+      directus:
+        condition: service_started
+    environment:
+      PYTHONUNBUFFERED: "1"
+      DIRECTUS_PUBLIC_URL: "http://directus:8055"
+    command: python -m backend.workers.listener_worker
+
+networks:
+  neurocomment-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  directus_uploads:
+  directus_extensions:
