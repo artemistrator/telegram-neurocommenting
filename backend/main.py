@@ -3,7 +3,8 @@ import json
 import os
 import traceback
 from typing import List, Dict, Optional
-from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File
+from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File, Query
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -11,10 +12,12 @@ from telethon import TelegramClient, events
 from telethon.errors import SessionPasswordNeededError
 import aiohttp
 import sys
+from datetime import datetime, timedelta
 from account_manager import AccountManager
 from database import init_database, migrate_from_json, get_setting, set_setting
 from subscriber import add_channels_to_queue, process_subscription_queue, get_subscription_stats
 from backend.routers import dashboard
+from backend.directus_client import DirectusClient
 from database import init_database, migrate_from_json, get_setting, set_setting
 from subscriber import add_channels_to_queue, process_subscription_queue, get_subscription_stats
 
@@ -113,6 +116,19 @@ def save_config():
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.include_router(dashboard.router)
+
+# CORS middleware для доступа к Dashboard API
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Инициализация Directus клиента для Dashboard API
+directus_client = DirectusClient()
+
 # Startup event
 @app.on_event("startup")
 async def startup_event():
@@ -133,6 +149,13 @@ async def startup_event():
             print(f"Ошибка миграции: {migration_result['message']}")
     except Exception as e:
         print(f"Ошибка инициализации БД: {e}")
+    
+    # Подключение к Directus для Dashboard API
+    try:
+        await directus_client.login()
+        print("✓ Directus подключен для Dashboard API")
+    except Exception as e:
+        print(f"⚠ Ошибка подключения к Directus: {e}")
     
     # Start subscriber background task
     asyncio.create_task(process_subscription_queue())
@@ -885,6 +908,293 @@ async def update_limits_settings(settings: LimitsSettings):
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
+
+
+# ============================================
+# DASHBOARD API ENDPOINTS
+# ============================================
+
+@app.get("/api/dashboard/stats")
+async def get_dashboard_stats(user_id: Optional[str] = Query(None)):
+    """
+    Получить общую статистику комментариев
+    
+    Возвращает:
+    - total_comments: общее количество комментов
+    - posted: успешно отправленные
+    - failed: с ошибками
+    - pending: в очереди
+    - today_comments: комментов за сегодня
+    - success_rate: процент успешных
+    """
+    try:
+        print(f"[Dashboard API] Запрос статистики (user_id={user_id})")
+        
+        # Параметры запроса с фильтрацией по пользователю
+        params = {
+            "fields": "id,status,posted_at",
+            "limit": -1  # Получить все записи
+        }
+        
+        if user_id:
+            params["filter[user_created][_eq]"] = user_id
+        
+        # Получить все записи из comment_queue
+        response = await directus_client.client.get("/items/comment_queue", params=params)
+        comments = response.json().get('data', [])
+        
+        print(f"[Dashboard API] Получено {len(comments)} записей из comment_queue")
+        
+        # Подсчёт статистики
+        total_comments = len(comments)
+        posted = sum(1 for c in comments if c.get('status') == 'posted')
+        failed = sum(1 for c in comments if c.get('status') == 'failed')
+        pending = sum(1 for c in comments if c.get('status') == 'pending')
+        
+        # Комментарии за сегодня
+        today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        today_comments = sum(
+            1 for c in comments 
+            if c.get('posted_at') and datetime.fromisoformat(c['posted_at'].replace('Z', '+00:00')) >= today_start
+        )
+        
+        # Процент успешных
+        success_rate = round((posted / total_comments * 100), 2) if total_comments > 0 else 0
+        
+        result = {
+            "total_comments": total_comments,
+            "posted": posted,
+            "failed": failed,
+            "pending": pending,
+            "today_comments": today_comments,
+            "success_rate": success_rate
+        }
+        
+        print(f"[Dashboard API] Статистика: {result}")
+        return result
+        
+    except Exception as e:
+        print(f"[Dashboard API] Ошибка получения статистики: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/dashboard/activity")
+async def get_dashboard_activity(
+    days: int = Query(7, ge=1, le=90),
+    user_id: Optional[str] = Query(None)
+):
+    """
+    Получить график активности комментирования по дням
+    
+    Параметры:
+    - days: количество дней для отображения (по умолчанию 7)
+    - user_id: фильтр по пользователю (опционально)
+    
+    Возвращает:
+    - labels: массив дат в формате YYYY-MM-DD
+    - data: массив количества комментов за каждый день
+    """
+    try:
+        print(f"[Dashboard API] Запрос активности за {days} дней (user_id={user_id})")
+        
+        # Вычислить диапазон дат
+        end_date = datetime.now().replace(hour=23, minute=59, second=59, microsecond=999999)
+        start_date = end_date - timedelta(days=days - 1)
+        start_date = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        # Параметры запроса
+        params = {
+            "fields": "posted_at",
+            "filter[status][_eq]": "posted",
+            "filter[posted_at][_gte]": start_date.isoformat(),
+            "limit": -1
+        }
+        
+        if user_id:
+            params["filter[user_created][_eq]"] = user_id
+        
+        # Получить комментарии за период
+        response = await directus_client.client.get("/items/comment_queue", params=params)
+        comments = response.json().get('data', [])
+        
+        print(f"[Dashboard API] Получено {len(comments)} комментов за период")
+        
+        # Группировка по датам
+        date_counts = {}
+        for comment in comments:
+            if comment.get('posted_at'):
+                posted_date = datetime.fromisoformat(comment['posted_at'].replace('Z', '+00:00')).date()
+                date_str = posted_date.strftime('%Y-%m-%d')
+                date_counts[date_str] = date_counts.get(date_str, 0) + 1
+        
+        # Создать массивы labels и data для всех дней (заполнить пропуски нулями)
+        labels = []
+        data = []
+        
+        current_date = start_date.date()
+        for i in range(days):
+            date_str = current_date.strftime('%Y-%m-%d')
+            labels.append(date_str)
+            data.append(date_counts.get(date_str, 0))
+            current_date += timedelta(days=1)
+        
+        result = {
+            "labels": labels,
+            "data": data
+        }
+        
+        print(f"[Dashboard API] График активности: {len(labels)} дней, всего {sum(data)} комментов")
+        return result
+        
+    except Exception as e:
+        print(f"[Dashboard API] Ошибка получения активности: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/dashboard/top-channels")
+async def get_top_channels(
+    limit: int = Query(10, ge=1, le=50),
+    user_id: Optional[str] = Query(None)
+):
+    """
+    Получить топ каналов по количеству комментариев
+    
+    Параметры:
+    - limit: количество каналов для отображения (по умолчанию 10)
+    - user_id: фильтр по пользователю (опционально)
+    
+    Возвращает:
+    - channels: массив объектов {channel_url, count}
+    """
+    try:
+        print(f"[Dashboard API] Запрос топ-{limit} каналов (user_id={user_id})")
+        
+        # Параметры запроса
+        params = {
+            "fields": "channel_url",
+            "limit": -1
+        }
+        
+        if user_id:
+            params["filter[user_created][_eq]"] = user_id
+        
+        # Получить все комментарии
+        response = await directus_client.client.get("/items/comment_queue", params=params)
+        comments = response.json().get('data', [])
+        
+        print(f"[Dashboard API] Получено {len(comments)} комментов для группировки")
+        
+        # Группировка по каналам
+        channel_counts = {}
+        for comment in comments:
+            channel_url = comment.get('channel_url', 'Unknown')
+            channel_counts[channel_url] = channel_counts.get(channel_url, 0) + 1
+        
+        # Сортировка по количеству (DESC) и ограничение
+        sorted_channels = sorted(
+            channel_counts.items(),
+            key=lambda x: x[1],
+            reverse=True
+        )[:limit]
+        
+        # Формирование результата
+        channels = [
+            {"channel_url": url, "count": count}
+            for url, count in sorted_channels
+        ]
+        
+        result = {"channels": channels}
+        
+        print(f"[Dashboard API] Топ каналов: {len(channels)} записей")
+        return result
+        
+    except Exception as e:
+        print(f"[Dashboard API] Ошибка получения топ каналов: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/dashboard/recent-comments")
+async def get_recent_comments(
+    limit: int = Query(20, ge=1, le=100),
+    user_id: Optional[str] = Query(None)
+):
+    """
+    Получить последние комментарии с деталями
+    
+    Параметры:
+    - limit: количество комментариев для отображения (по умолчанию 20)
+    - user_id: фильтр по пользователю (опционально)
+    
+    Возвращает:
+    - comments: массив объектов с полями:
+      - id, status, channel_url
+      - generated_comment (обрезан до 100 символов)
+      - posted_at, error_message
+      - account_phone (из связанного аккаунта)
+    """
+    try:
+        print(f"[Dashboard API] Запрос последних {limit} комментов (user_id={user_id})")
+        
+        # Параметры запроса с JOIN к accounts через field expansion
+        params = {
+            "fields": "*,account_id.phone",
+            "sort": "-id",  # Сортировка по ID DESC (новые первыми)
+            "limit": limit
+        }
+        
+        if user_id:
+            params["filter[user_created][_eq]"] = user_id
+        
+        # Получить комментарии с данными аккаунтов
+        response = await directus_client.client.get("/items/comment_queue", params=params)
+        comments_data = response.json().get('data', [])
+        
+        print(f"[Dashboard API] Получено {len(comments_data)} последних комментов")
+        
+        # Форматирование результата
+        comments = []
+        for comment in comments_data:
+            # Обрезать текст комментария до 100 символов
+            generated_comment = comment.get('generated_comment') or ''
+            if len(generated_comment) > 100:
+                generated_comment = generated_comment[:100] + '...'
+            
+            # Получить phone из вложенного объекта account_id
+            account_phone = None
+            if isinstance(comment.get('account_id'), dict):
+                account_phone = comment['account_id'].get('phone')
+            
+            comments.append({
+                "id": comment.get('id'),
+                "status": comment.get('status'),
+                "channel_url": comment.get('channel_url'),
+                "generated_comment": generated_comment,
+                "posted_at": comment.get('posted_at'),
+                "error_message": comment.get('error_message'),
+                "account_phone": account_phone
+            })
+        
+        result = {"comments": comments}
+        
+        print(f"[Dashboard API] Последние комментарии: {len(comments)} записей")
+        return result
+        
+    except Exception as e:
+        print(f"[Dashboard API] Ошибка получения последних комментов: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================
+# END DASHBOARD API
+# ============================================
 
 
 # ============================================

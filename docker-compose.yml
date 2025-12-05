@@ -130,6 +130,26 @@
       DIRECTUS_PUBLIC_URL: "http://directus:8055"
     command: python -m backend.workers.listener_worker
 
+  commenting-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    container_name: neurocomment-commenting-worker
+    restart: unless-stopped
+    volumes:
+      - ./backend:/app/backend
+      - ./.env:/app/.env
+    networks:
+      - neurocomment-network
+    depends_on:
+      directus:
+        condition: service_started
+    environment:
+      PYTHONUNBUFFERED: "1"
+      DIRECTUS_PUBLIC_URL: "http://directus:8055"
+      OPENAI_API_KEY: "${OPENAI_API_KEY}"
+    command: python -u backend/workers/commenting_worker.py
+
 networks:
   neurocomment-network:
     driver: bridge

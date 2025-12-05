@@ -182,7 +182,7 @@ def calculate_system_health(account_stats: Dict[str, int]) -> str:
 
 # API Endpoints
 
-@router.get("/stats", response_model=DashboardStatsResponse)
+@router.get("/account-stats", response_model=DashboardStatsResponse)
 async def get_dashboard_stats():
     """
     Get dashboard statistics for the current user.
