@@ -248,7 +248,8 @@ async def process_post(post: Dict, account: Dict) -> bool:
             "user_created": user_created
         }
         
-        queue_entry = await directus.create_item("comment_queue", queue_data)
+        response = await directus.client.post("/items/comment_queue", json=queue_data)
+        queue_entry = response.json().get('data')
         queue_id = queue_entry['id']
         
         logger.info(f"[Parser] ✓ Пост #{post_id} создана задача comment_queue #{queue_id}")

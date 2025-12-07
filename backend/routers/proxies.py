@@ -4,7 +4,7 @@ import asyncio
 import socks
 import socket
 from typing import List, Dict, Optional
-from fastapi import APIRouter, HTTPException, UploadFile, File
+from fastapi import APIRouter, HTTPException, UploadFile, File, Query, Form
 from pydantic import BaseModel
 import logging
 
@@ -38,12 +38,16 @@ class ProxyTestResponse(BaseModel):
 
 
 # Helper functions
-def parse_proxy_line(line: str) -> Optional[Dict[str, str]]:
+def parse_proxy_line(line: str, default_type: str = 'socks5') -> Optional[Dict[str, str]]:
     """
     Parse proxy string in various formats:
     - socks5://user:pass@host:port
     - host:port:user:pass
     - host:port
+    
+    Args:
+        line: Proxy string to parse
+        default_type: Default proxy type if not specified in line (socks5, socks4, http)
     """
     line = line.strip()
     if not line or line.startswith('#'):
@@ -62,11 +66,11 @@ def parse_proxy_line(line: str) -> Optional[Dict[str, str]]:
             'password': password or ''
         }
     
-    # Format: host:port:user:pass or host:port
+    # Format: host:port:user:pass or host:port (use default_type)
     parts = line.split(':')
     if len(parts) == 4:
         return {
-            'type': 'socks5',
+            'type': default_type,
             'host': parts[0],
             'port': int(parts[1]),
             'username': parts[2],
@@ -74,7 +78,7 @@ def parse_proxy_line(line: str) -> Optional[Dict[str, str]]:
         }
     elif len(parts) == 2:
         return {
-            'type': 'socks5',
+            'type': default_type,
             'host': parts[0],
             'port': int(parts[1]),
             'username': '',
@@ -143,13 +147,20 @@ async def test_proxy_connection(proxy_config: Dict) -> Dict:
 # API Endpoints
 
 @router.post("/import", response_model=ProxyImportResponse)
-async def import_proxies(file: UploadFile = File(...)):
+async def import_proxies(
+    file: UploadFile = File(...),
+    default_type: str = Query('socks5', regex='^(socks5|socks4|http)$')
+):
     """
     Import proxies from text/CSV file
     Supports formats:
     - socks5://user:pass@host:port
     - host:port:user:pass
     - host:port
+    
+    Args:
+        file: Text file with proxy list
+        default_type: Default proxy type for entries without explicit protocol (socks5, socks4, http)
     """
     try:
         # Ensure Directus is logged in
@@ -166,7 +177,7 @@ async def import_proxies(file: UploadFile = File(...)):
         
         for line_num, line in enumerate(lines, 1):
             try:
-                proxy_data = parse_proxy_line(line)
+                proxy_data = parse_proxy_line(line, default_type=default_type)
                 
                 if not proxy_data:
                     continue  # Skip empty lines and comments
@@ -183,7 +194,7 @@ async def import_proxies(file: UploadFile = File(...)):
                 })
                 
                 imported += 1
-                logger.info(f"Imported proxy: {proxy_data['host']}:{proxy_data['port']}")
+                logger.info(f"Imported proxy: {proxy_data['host']}:{proxy_data['port']} ({proxy_data['type']})")
                 
             except Exception as e:
                 error_msg = f"Line {line_num}: {str(e)}"
@@ -278,6 +289,40 @@ async def test_proxy(proxy_id: int):
     except Exception as e:
         logger.error(f"Error testing proxy {proxy_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Proxy test failed: {str(e)}")
+
+
+@router.patch("/{proxy_id}")
+async def update_proxy(proxy_id: int, data: dict):
+    """
+    Update proxy fields (type, status, etc.)
+    When type is changed, status is automatically reset to 'untested'
+    """
+    try:
+        # Ensure Directus is logged in
+        if not directus.token:
+            await directus.login()
+        
+        # If type is being changed, reset status to untested
+        if 'type' in data:
+            data['status'] = 'untested'
+            data['ping_ms'] = None
+            logger.info(f"Proxy {proxy_id} type changed to {data['type']}, status reset to untested")
+        
+        # Update proxy in Directus
+        response = await directus.client.patch(f"/items/proxies/{proxy_id}", json=data)
+        response.raise_for_status()
+        updated_proxy = response.json()['data']
+        
+        logger.info(f"Updated proxy {proxy_id}")
+        
+        return {
+            'status': 'success',
+            'proxy': updated_proxy
+        }
+        
+    except Exception as e:
+        logger.error(f"Error updating proxy {proxy_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to update proxy: {str(e)}")
 
 
 @router.delete("/{proxy_id}")

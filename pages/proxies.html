@@ -1,0 +1,467 @@
+<div class="max-w-7xl">
+    <div class="flex justify-between items-center mb-8">
+        <h1 class="text-3xl font-bold text-gray-800">Управление Прокси</h1>
+        <div class="flex gap-3">
+            <button onclick="testAllProxies()"
+                class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-medium transition">
+                🔍 Проверить все
+            </button>
+            <button onclick="openImportProxyModal()"
+                class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition">
+                📥 Импорт списка
+            </button>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white rounded-lg shadow p-4">
+            <p class="text-sm text-gray-600">Всего прокси</p>
+            <p class="text-2xl font-bold text-gray-900" id="total-proxies">0</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <p class="text-sm text-gray-600">Живых (active)</p>
+            <p class="text-2xl font-bold text-green-600" id="active-proxies">0</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <p class="text-sm text-gray-600">Мертвых (dead)</p>
+            <p class="text-2xl font-bold text-red-600" id="dead-proxies">0</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <p class="text-sm text-gray-600">Свободных</p>
+            <p class="text-2xl font-bold text-blue-600" id="free-proxies">0</p>
+        </div>
+    </div>
+
+    <!-- Proxies Table -->
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            IP:Port</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Тип</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Auth (User/Pass)</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Статус</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Пинг</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Привязка</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Последняя проверка</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Действия</th>
+                    </tr>
+                </thead>
+                <tbody id="proxies-table" class="bg-white divide-y divide-gray-200">
+                    <!-- Proxies will be loaded here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Notification -->
+<div id="toast" class="fixed top-4 right-4 bg-white shadow-lg rounded-lg p-4 hidden transition-all z-50 max-w-sm">
+    <div class="flex items-center">
+        <span id="toast-icon" class="text-2xl mr-3"></span>
+        <p id="toast-message" class="text-sm font-medium text-gray-800"></p>
+    </div>
+</div>
+
+<!-- Import Proxy Modal -->
+<div id="importProxyModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-center p-6 border-b">
+            <h2 class="text-2xl font-bold text-gray-800">Импорт прокси</h2>
+            <button onclick="closeImportProxyModal()" class="text-gray-500 hover:text-gray-700">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+
+        <div class="p-6">
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Тип прокси по умолчанию</label>
+                <select id="default-proxy-type" class="w-full p-2 border border-gray-300 rounded-md">
+                    <option value="socks5">SOCKS5</option>
+                    <option value="socks4">SOCKS4</option>
+                    <option value="http">HTTP</option>
+                </select>
+                <p class="text-xs text-gray-500 mt-1">
+                    Используется для прокси без явного указания протокола
+                </p>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Список прокси</label>
+                <textarea id="proxy-list" rows="10"
+                    class="w-full p-3 border border-gray-300 rounded-md font-mono text-sm"
+                    placeholder="Вставьте список прокси в формате:&#10;ip:port:user:pass&#10;или&#10;socks5://user:pass@ip:port&#10;или&#10;ip:port (без авторизации)"></textarea>
+                <p class="text-xs text-gray-500 mt-2">
+                    Поддерживаемые форматы:
+                    <br>• <code class="bg-gray-100 px-1 rounded">ip:port:user:pass</code>
+                    <br>• <code class="bg-gray-100 px-1 rounded">socks5://user:pass@ip:port</code>
+                    <br>• <code class="bg-gray-100 px-1 rounded">ip:port</code> (без авторизации)
+                </p>
+            </div>
+
+            <div class="flex gap-3">
+                <button onclick="importProxyList()"
+                    class="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md font-medium transition">
+                    Загрузить
+                </button>
+                <button onclick="closeImportProxyModal()"
+                    class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-2 rounded-md font-medium transition">
+                    Отмена
+                </button>
+            </div>
+
+            <div id="import-status" class="mt-4 hidden">
+                <div class="p-4 rounded-lg">
+                    <p class="text-sm font-medium" id="import-status-text"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Load proxies on page load
+    loadProxies();
+
+    // Toast notification function
+    function showToast(message, type = 'success') {
+        const toast = document.getElementById('toast');
+        const icon = document.getElementById('toast-icon');
+        const messageEl = document.getElementById('toast-message');
+
+        const icons = {
+            success: '✅',
+            error: '❌',
+            info: 'ℹ️',
+            warning: '⚠️'
+        };
+
+        icon.textContent = icons[type] || icons.info;
+        messageEl.textContent = message;
+
+        toast.classList.remove('hidden');
+
+        setTimeout(() => {
+            toast.classList.add('hidden');
+        }, 3000);
+    }
+
+    // Modal functions
+    function openImportProxyModal() {
+        document.getElementById('importProxyModal').classList.remove('hidden');
+        document.getElementById('importProxyModal').classList.add('flex');
+        document.getElementById('proxy-list').value = '';
+        document.getElementById('import-status').classList.add('hidden');
+    }
+
+    function closeImportProxyModal() {
+        document.getElementById('importProxyModal').classList.add('hidden');
+        document.getElementById('importProxyModal').classList.remove('flex');
+    }
+
+    // Update proxy
+    async function updateProxy(proxyId, data) {
+        try {
+            const response = await fetch(`/api/proxies/${proxyId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (response.ok) {
+                return await response.json();
+            } else {
+                const error = await response.json();
+                throw new Error(error.detail || 'Update failed');
+            }
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    // Handle proxy type change
+    async function handleProxyTypeChange(proxyId, newType) {
+        try {
+            await updateProxy(proxyId, { type: newType });
+            showToast('Тип обновлен. Статус сброшен на "не проверен"', 'success');
+            await loadProxies();
+        } catch (error) {
+            showToast(`Ошибка обновления: ${error.message}`, 'error');
+        }
+    }
+
+    // Import proxy list
+    async function importProxyList() {
+        const proxyList = document.getElementById('proxy-list').value.trim();
+        const defaultType = document.getElementById('default-proxy-type').value;
+
+        if (!proxyList) {
+            alert('Вставьте список прокси');
+            return;
+        }
+
+        // Create a text file from the textarea content
+        const blob = new Blob([proxyList], { type: 'text/plain' });
+        const file = new File([blob], 'proxies.txt', { type: 'text/plain' });
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const statusDiv = document.getElementById('import-status');
+        const statusText = document.getElementById('import-status-text');
+
+        statusDiv.classList.remove('hidden');
+        statusDiv.querySelector('div').className = 'p-4 rounded-lg bg-blue-50';
+        statusText.className = 'text-sm font-medium text-blue-800';
+        statusText.textContent = 'Импорт прокси...';
+
+        try {
+            const response = await fetch(`/api/proxies/import?default_type=${defaultType}`, {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                statusDiv.querySelector('div').className = 'p-4 rounded-lg bg-green-50';
+                statusText.className = 'text-sm font-medium text-green-800';
+                statusText.textContent = `✅ Импортировано: ${data.imported} прокси (тип по умолчанию: ${defaultType.toUpperCase()})`;
+
+                if (data.errors.length > 0) {
+                    statusText.textContent += `\n⚠️ Ошибок: ${data.errors.length}`;
+                    console.log('Import errors:', data.errors);
+                }
+
+                // Reload proxies after 1 second
+                setTimeout(() => {
+                    closeImportProxyModal();
+                    loadProxies();
+                }, 1500);
+            } else {
+                statusDiv.querySelector('div').className = 'p-4 rounded-lg bg-red-50';
+                statusText.className = 'text-sm font-medium text-red-800';
+                statusText.textContent = `❌ Ошибка: ${data.detail}`;
+            }
+        } catch (error) {
+            statusDiv.querySelector('div').className = 'p-4 rounded-lg bg-red-50';
+            statusText.className = 'text-sm font-medium text-red-800';
+            statusText.textContent = `❌ Ошибка: ${error.message}`;
+        }
+    }
+
+    // Load proxies
+    async function loadProxies() {
+        try {
+            const response = await fetch('/api/proxies/list');
+            const data = await response.json();
+
+            const tbody = document.getElementById('proxies-table');
+            tbody.innerHTML = '';
+
+            if (data.proxies.length === 0) {
+                tbody.innerHTML = `
+                <tr>
+                    <td colspan="8" class="px-6 py-12 text-center">
+                        <div class="text-gray-400">
+                            <svg class="mx-auto h-12 w-12 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"/>
+                            </svg>
+                            <p class="text-lg font-medium text-gray-900 mb-2">Прокси не загружены</p>
+                            <p class="text-sm text-gray-500">Нажмите "Импорт списка" чтобы начать</p>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            } else {
+                data.proxies.forEach(proxy => {
+                    const row = document.createElement('tr');
+                    row.className = 'hover:bg-gray-50';
+                    row.setAttribute('data-proxy-id', proxy.id);
+
+                    // Status badge
+                    let statusBadge = '';
+                    if (proxy.status === 'ok' || proxy.status === 'active') {
+                        statusBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Активен</span>';
+                    } else if (proxy.status === 'failed' || proxy.status === 'dead') {
+                        statusBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Мертв</span>';
+                    } else {
+                        statusBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">Не проверен</span>';
+                    }
+
+                    // Auth display
+                    const authText = proxy.username ? `${proxy.username}:***` : '-';
+
+                    // Ping display
+                    const pingText = proxy.ping_ms ? `${proxy.ping_ms}ms` : '-';
+
+                    // Assignment display
+                    let assignmentText = '<span class="text-green-600 font-medium">Свободен</span>';
+                    if (proxy.assigned_to) {
+                        assignmentText = `<span class="text-gray-600">Аккаунт #${proxy.assigned_to}</span>`;
+                    }
+
+                    // Last check display
+                    const lastCheck = proxy.last_check ? new Date(proxy.last_check).toLocaleString('ru-RU') : '-';
+
+                    // Editable type dropdown
+                    const typeDropdown = `
+                        <select onchange="handleProxyTypeChange(${proxy.id}, this.value)" 
+                            class="px-2 py-1 text-xs font-medium rounded bg-blue-100 text-blue-800 border-none cursor-pointer hover:bg-blue-200">
+                            <option value="socks5" ${proxy.type === 'socks5' ? 'selected' : ''}>SOCKS5</option>
+                            <option value="socks4" ${proxy.type === 'socks4' ? 'selected' : ''}>SOCKS4</option>
+                            <option value="http" ${proxy.type === 'http' ? 'selected' : ''}>HTTP</option>
+                        </select>
+                    `;
+
+                    row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">${proxy.host}:${proxy.port}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${typeDropdown}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-gray-500 text-sm font-mono">${authText}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${statusBadge}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-gray-500 text-sm">${pingText}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">${assignmentText}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-gray-500 text-sm">${lastCheck}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            <button onclick="testSingleProxy(${proxy.id})" 
+                                class="text-blue-600 hover:text-blue-800 font-medium mr-3"
+                                title="Проверить прокси">
+                                🔍
+                            </button>
+                            <button onclick="deleteProxy(${proxy.id})" 
+                                class="text-red-600 hover:text-red-800 font-medium"
+                                title="Удалить">
+                                🗑️
+                            </button>
+                        </td>
+                    `;
+
+                    tbody.appendChild(row);
+                });
+            }
+
+            // Update stats
+            const totalProxies = data.proxies.length;
+            const activeProxies = data.proxies.filter(p => p.status === 'ok' || p.status === 'active').length;
+            const deadProxies = data.proxies.filter(p => p.status === 'failed' || p.status === 'dead').length;
+            const freeProxies = data.proxies.filter(p => !p.assigned_to).length;
+
+            document.getElementById('total-proxies').textContent = totalProxies;
+            document.getElementById('active-proxies').textContent = activeProxies;
+            document.getElementById('dead-proxies').textContent = deadProxies;
+            document.getElementById('free-proxies').textContent = freeProxies;
+
+        } catch (error) {
+            console.error('Error loading proxies:', error);
+            showToast(`Ошибка загрузки прокси: ${error.message}`, 'error');
+        }
+    }
+
+    // Test single proxy
+    async function testSingleProxy(proxyId) {
+        const row = document.querySelector(`tr[data-proxy-id="${proxyId}"]`);
+        if (!row) return;
+
+        // Show loading state
+        const statusCell = row.cells[3];
+        const originalStatus = statusCell.innerHTML;
+        statusCell.innerHTML = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Проверка...</span>';
+
+        try {
+            const response = await fetch(`/api/proxies/test/${proxyId}`, {
+                method: 'POST'
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                if (data.status === 'ok') {
+                    showToast(`Прокси работает! Пинг: ${data.ping_ms}ms`, 'success');
+                } else {
+                    showToast('Прокси не работает', 'error');
+                }
+                // Reload proxies to get updated data
+                await loadProxies();
+            } else {
+                statusCell.innerHTML = originalStatus;
+                showToast(`Ошибка проверки: ${data.detail}`, 'error');
+            }
+        } catch (error) {
+            statusCell.innerHTML = originalStatus;
+            showToast(`Ошибка: ${error.message}`, 'error');
+        }
+    }
+
+    // Test all proxies
+    async function testAllProxies() {
+        const tbody = document.getElementById('proxies-table');
+        const rows = tbody.querySelectorAll('tr[data-proxy-id]');
+
+        if (rows.length === 0) {
+            alert('Нет прокси для проверки');
+            return;
+        }
+
+        if (!confirm(`Проверить все ${rows.length} прокси? Это может занять некоторое время.`)) {
+            return;
+        }
+
+        let completed = 0;
+        const total = rows.length;
+
+        for (const row of rows) {
+            const proxyId = row.getAttribute('data-proxy-id');
+
+            try {
+                await testSingleProxy(proxyId);
+                completed++;
+
+                // Update progress in console
+                console.log(`Проверено ${completed}/${total} прокси`);
+
+                // Small delay between tests to avoid overwhelming the server
+                await new Promise(resolve => setTimeout(resolve, 500));
+            } catch (error) {
+                console.error(`Ошибка проверки прокси ${proxyId}:`, error);
+            }
+        }
+
+        showToast(`Проверка завершена! Проверено ${completed}/${total} прокси.`, 'success');
+        await loadProxies();
+    }
+
+    // Delete proxy
+    async function deleteProxy(proxyId) {
+        if (!confirm('Удалить прокси? Это действие нельзя отменить.')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/proxies/${proxyId}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                showToast('Прокси удален', 'success');
+                await loadProxies();
+            } else {
+                const data = await response.json();
+                showToast(`Ошибка: ${data.detail}`, 'error');
+            }
+        } catch (error) {
+            showToast(`Ошибка: ${error.message}`, 'error');
+        }
+    }
+</script>

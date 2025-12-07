@@ -445,7 +445,8 @@ async def process_post(
             "user_created": user_created
         }
         
-        queue_entry = await directus.create_item("comment_queue", queue_data)
+        response = await directus.client.post("/items/comment_queue", json=queue_data)
+        queue_entry = response.json().get('data')
         queue_id = queue_entry['id']
         print(f"  ✓ Created queue entry {queue_id}")
         
@@ -464,12 +465,12 @@ async def process_post(
     # Update queue entry
     try:
         if success:
-            await directus.update_item("comment_queue", queue_id, {
+            await directus.client.patch(f"/items/comment_queue/{queue_id}", json={
                 "status": "posted",
                 "posted_at": datetime.now().isoformat()
             })
         else:
-            await directus.update_item("comment_queue", queue_id, {
+            await directus.client.patch(f"/items/comment_queue/{queue_id}", json={
                 "status": "failed",
                 "error_message": error_msg
             })

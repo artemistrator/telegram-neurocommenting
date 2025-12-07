@@ -1,26 +1,46 @@
-<div class="max-w-6xl">
+<div class="max-w-7xl">
     <div class="flex justify-between items-center mb-8">
-        <h1 class="text-3xl font-bold text-gray-800">Управление аккаунтами</h1>
+        <h1 class="text-3xl font-bold text-gray-800">Управление Аккаунтами</h1>
         <button onclick="openImportModal()"
             class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition">
-            Импорт аккаунтов
+            📥 Импорт аккаунтов
         </button>
     </div>
 
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white rounded-lg shadow p-4">
+            <p class="text-sm text-gray-600">Всего аккаунтов</p>
+            <p class="text-2xl font-bold text-gray-900" id="total-accounts">0</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <p class="text-sm text-gray-600">Активных</p>
+            <p class="text-2xl font-bold text-green-600" id="active-accounts">0</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <p class="text-sm text-gray-600">Setup завершен</p>
+            <p class="text-2xl font-bold text-blue-600" id="setup-completed">0</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <p class="text-sm text-gray-600">С прокси</p>
+            <p class="text-2xl font-bold text-purple-600" id="with-proxy">0</p>
+        </div>
+    </div>
+
     <!-- Accounts Table -->
-    <div class="bg-white rounded-lg shadow-md overflow-hidden mb-6">
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Телефон</th>
+                            Профиль</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Статус</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Прокси</th>
+                            Setup</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Последняя активность</th>
+                            Прокси</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Действия</th>
                     </tr>
@@ -31,24 +51,62 @@
             </table>
         </div>
     </div>
+</div>
 
-    <!-- Stats Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div class="bg-white rounded-lg shadow p-4">
-            <p class="text-sm text-gray-600">Всего аккаунтов</p>
-            <p class="text-2xl font-bold text-gray-900" id="total-accounts">0</p>
+<!-- Toast Notification -->
+<div id="toast" class="fixed top-4 right-4 bg-white shadow-lg rounded-lg p-4 hidden transition-all z-50 max-w-sm">
+    <div class="flex items-center">
+        <span id="toast-icon" class="text-2xl mr-3"></span>
+        <p id="toast-message" class="text-sm font-medium text-gray-800"></p>
+    </div>
+</div>
+
+<!-- Account Details Modal -->
+<div id="accountDetailsModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
+        <div class="flex justify-between items-center p-6 border-b">
+            <h2 class="text-2xl font-bold text-gray-800">Детали аккаунта</h2>
+            <button onclick="closeAccountDetails()" class="text-gray-500 hover:text-gray-700">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
         </div>
-        <div class="bg-white rounded-lg shadow p-4">
-            <p class="text-sm text-gray-600">Активных</p>
-            <p class="text-2xl font-bold text-green-600" id="active-accounts">0</p>
+
+        <div class="p-6">
+            <div class="flex items-center mb-6">
+                <img id="modal-avatar" src="" alt="Avatar" class="w-20 h-20 rounded-full mr-6 border-2 border-gray-100">
+                <div>
+                    <h3 id="modal-name" class="text-xl font-bold text-gray-900"></h3>
+                    <p id="modal-phone" class="text-gray-600 font-mono"></p>
+                    <div id="modal-badges" class="flex gap-2 mt-2"></div>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider">Bio</h4>
+                    <p id="modal-bio" class="text-gray-800 mt-1 bg-gray-50 p-2 rounded"></p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider">Setup Status</h4>
+                        <div id="modal-setup" class="mt-1"></div>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider">Proxy</h4>
+                        <div id="modal-proxy" class="mt-1"></div>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="bg-white rounded-lg shadow p-4">
-            <p class="text-sm text-gray-600">Заблокированных</p>
-            <p class="text-2xl font-bold text-red-600" id="blocked-accounts">0</p>
-        </div>
-        <div class="bg-white rounded-lg shadow p-4">
-            <p class="text-sm text-gray-600">Ожидают</p>
-            <p class="text-2xl font-bold text-yellow-600" id="pending-accounts">0</p>
+
+        <div class="p-6 bg-gray-50 rounded-b-lg flex justify-end">
+            <button onclick="closeAccountDetails()"
+                class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-lg font-medium transition">
+                Закрыть
+            </button>
         </div>
     </div>
 </div>
@@ -57,7 +115,7 @@
 <div id="importModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
     <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div class="flex justify-between items-center p-6 border-b">
-            <h2 class="text-2xl font-bold text-gray-800">Импорт аккаунтов</h2>
+            <h2 class="text-2xl font-bold text-gray-800">Добавить аккаунты</h2>
             <button onclick="closeImportModal()" class="text-gray-500 hover:text-gray-700">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -65,295 +123,149 @@
             </button>
         </div>
 
-        <div class="p-6">
-            <!-- Tab Buttons -->
-            <div class="flex mb-6 border-b">
-                <button onclick="switchTab('csv')" id="tab-csv"
-                    class="tab-button px-4 py-2 font-medium border-b-2 border-blue-500 text-blue-600">
-                    📋 Способ 1: CSV + Session файлы
+        <!-- Tabs -->
+        <div class="border-b border-gray-200">
+            <nav class="-mb-px flex px-6" aria-label="Tabs">
+                <button onclick="switchTab('zip')" id="tab-zip"
+                    class="border-blue-500 text-blue-600 w-1/2 py-4 px-1 text-center border-b-2 font-medium text-sm">
+                    📂 ZIP Архив
                 </button>
-                <button onclick="switchTab('ui')" id="tab-ui"
-                    class="tab-button px-4 py-2 font-medium border-b-2 border-transparent text-gray-600 hover:text-gray-800">
-                    🔐 Способ 2: UI Авторизация
+                <button onclick="switchTab('manual')" id="tab-manual"
+                    class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 w-1/2 py-4 px-1 text-center border-b-2 font-medium text-sm">
+                    ✏️ Ручной ввод
                 </button>
-            </div>
+            </nav>
+        </div>
 
-            <!-- CSV Import Tab -->
-            <div id="csv-tab" class="tab-content">
+        <div class="p-6">
+            <!-- ZIP Tab Content -->
+            <div id="content-zip">
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">CSV файл</label>
-                    <input type="file" id="csv-file" accept=".csv" class="w-full p-2 border border-gray-300 rounded-md">
-                    <p class="text-xs text-gray-500 mt-1">Формат:
-                        phone,api_id,api_hash,session_file,proxy_type,proxy_host,proxy_port,proxy_user,proxy_pass</p>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">ZIP Архив</label>
+                    <input type="file" id="zip-file" accept=".zip" class="w-full p-2 border border-gray-300 rounded-md">
+                    <p class="text-xs text-gray-500 mt-1">
+                        Архив должен содержать .session файлы и опционально .json с метаданными
+                    </p>
                 </div>
 
-                <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Session файлы</label>
-                    <input type="file" id="session-files" multiple accept=".session"
+                <div class="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <label class="flex items-center cursor-pointer">
+                        <input type="checkbox" id="auto-assign-proxy-zip" checked
+                            class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                        <span class="ml-3 text-sm font-medium text-gray-700">
+                            🤖 Автоматически назначить свободные прокси
+                        </span>
+                    </label>
+                </div>
+
+                <div class="flex gap-3">
+                    <button onclick="importAccounts()"
+                        class="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md font-medium transition">
+                        Импорт
+                    </button>
+                </div>
+            </div>
+
+            <!-- Manual Tab Content -->
+            <div id="content-manual" class="hidden space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Номер телефона <span
+                            class="text-red-500">*</span></label>
+                    <input type="text" id="manual-phone" placeholder="+1234567890"
                         class="w-full p-2 border border-gray-300 rounded-md">
-                    <p class="text-xs text-gray-500 mt-1">Выберите все .session файлы, указанные в CSV</p>
                 </div>
 
-                <button onclick="importCSV()"
-                    class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md font-medium transition w-full">
-                    Импортировать
-                </button>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">API ID <span
+                                class="text-red-500">*</span></label>
+                        <input type="number" id="manual-api-id" placeholder="123456"
+                            class="w-full p-2 border border-gray-300 rounded-md">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">API Hash <span
+                                class="text-red-500">*</span></label>
+                        <input type="text" id="manual-api-hash" placeholder="abcdef123456..."
+                            class="w-full p-2 border border-gray-300 rounded-md">
+                    </div>
+                </div>
 
-                <div class="mt-4 p-4 bg-blue-50 rounded-lg">
-                    <p class="text-sm text-blue-800 mb-2">💡 Нужна помощь с созданием .session файлов?</p>
-                    <button onclick="showInstructionModal()"
-                        class="text-blue-600 hover:text-blue-800 text-sm font-medium">
-                        Показать скрипт для создания сессий
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Session String (Optional)</label>
+                    <textarea id="manual-session" rows="3" placeholder="1BVtsOK..."
+                        class="w-full p-2 border border-gray-300 rounded-md font-mono text-xs"></textarea>
+                </div>
+
+                <div class="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <label class="flex items-center cursor-pointer">
+                        <input type="checkbox" id="auto-assign-proxy-manual" checked
+                            class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                        <span class="ml-3 text-sm font-medium text-gray-700">
+                            🤖 Автоматически назначить свободный прокси
+                        </span>
+                    </label>
+                </div>
+
+                <div class="flex gap-3 pt-2">
+                    <button onclick="createAccount()"
+                        class="flex-1 bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-md font-medium transition">
+                        Создать аккаунт
                     </button>
                 </div>
             </div>
 
-            <!-- UI Auth Tab -->
-            <div id="ui-tab" class="tab-content hidden">
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">API ID</label>
-                        <input type="text" id="auth-api-id" class="w-full p-2 border border-gray-300 rounded-md"
-                            placeholder="12345">
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">API Hash</label>
-                        <input type="text" id="auth-api-hash" class="w-full p-2 border border-gray-300 rounded-md"
-                            placeholder="abc123def456...">
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Телефон</label>
-                        <input type="text" id="auth-phone" class="w-full p-2 border border-gray-300 rounded-md"
-                            placeholder="+79001234567">
-                    </div>
-
-                    <div class="border-t pt-4">
-                        <p class="text-sm font-medium text-gray-700 mb-3">Прокси (опционально)</p>
-
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-xs text-gray-600 mb-1">Тип</label>
-                                <select id="proxy-type" class="w-full p-2 border border-gray-300 rounded-md text-sm">
-                                    <option value="socks5">SOCKS5</option>
-                                    <option value="socks4">SOCKS4</option>
-                                    <option value="http">HTTP</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-xs text-gray-600 mb-1">Хост</label>
-                                <input type="text" id="proxy-host"
-                                    class="w-full p-2 border border-gray-300 rounded-md text-sm"
-                                    placeholder="proxy.com">
-                            </div>
-                            <div>
-                                <label class="block text-xs text-gray-600 mb-1">Порт</label>
-                                <input type="number" id="proxy-port"
-                                    class="w-full p-2 border border-gray-300 rounded-md text-sm" placeholder="1080">
-                            </div>
-                            <div>
-                                <label class="block text-xs text-gray-600 mb-1">Username</label>
-                                <input type="text" id="proxy-user"
-                                    class="w-full p-2 border border-gray-300 rounded-md text-sm">
-                            </div>
-                            <div class="col-span-2">
-                                <label class="block text-xs text-gray-600 mb-1">Password</label>
-                                <input type="password" id="proxy-pass"
-                                    class="w-full p-2 border border-gray-300 rounded-md text-sm">
-                            </div>
-                        </div>
-
-                        <button onclick="testProxy()"
-                            class="mt-3 text-blue-600 hover:text-blue-800 text-sm font-medium">
-                            Проверить прокси
-                        </button>
-                        <span id="proxy-status" class="ml-2 text-sm"></span>
-                    </div>
-
-                    <button onclick="startAuth()"
-                        class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-md font-medium transition w-full mt-4">
-                        Начать авторизацию
-                    </button>
+            <!-- Status Area -->
+            <div id="import-status" class="mt-4 hidden">
+                <div class="p-4 rounded-lg">
+                    <p class="text-sm font-medium" id="import-status-text"></p>
                 </div>
             </div>
         </div>
-    </div>
-</div>
 
-<!-- Code Input Modal -->
-<div id="codeModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-        <div class="flex justify-between items-center p-6 border-b">
-            <h2 class="text-xl font-bold text-gray-800">Авторизация аккаунта</h2>
-            <button onclick="closeCodeModal()" class="text-gray-500 hover:text-gray-700">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
+        <div class="p-4 bg-gray-50 border-t border-gray-200 flex justify-end">
+            <button onclick="closeImportModal()" class="text-gray-600 hover:text-gray-800 font-medium text-sm">
+                Закрыть
             </button>
-        </div>
-
-        <div class="p-6">
-            <p class="text-gray-600 mb-4">Код отправлен в Telegram на <span id="masked-phone"
-                    class="font-medium"></span></p>
-
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Введите код</label>
-                <input type="text" id="auth-code"
-                    class="w-full p-3 border border-gray-300 rounded-md text-center text-lg tracking-widest"
-                    placeholder="12345" maxlength="5">
-            </div>
-
-            <button onclick="submitCode()"
-                class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md font-medium transition w-full">
-                Подтвердить
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- 2FA Password Modal -->
-<div id="passwordModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-        <div class="flex justify-between items-center p-6 border-b">
-            <h2 class="text-xl font-bold text-gray-800">Двухфакторная аутентификация</h2>
-            <button onclick="closePasswordModal()" class="text-gray-500 hover:text-gray-700">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-            </button>
-        </div>
-
-        <div class="p-6">
-            <p class="text-gray-600 mb-4">Введите облачный пароль для завершения авторизации</p>
-
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Пароль</label>
-                <input type="password" id="auth-password" class="w-full p-3 border border-gray-300 rounded-md">
-            </div>
-
-            <button onclick="submitPassword()"
-                class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md font-medium transition w-full">
-                Подтвердить
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- Instruction Modal -->
-<div id="instructionModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-    <div class="bg-white rounded-lg shadow-xl max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <div class="flex justify-between items-center p-6 border-b">
-            <h2 class="text-xl font-bold text-gray-800">Создание .session файлов локально</h2>
-            <button onclick="closeInstructionModal()" class="text-gray-500 hover:text-gray-700">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-            </button>
-        </div>
-
-        <div class="p-6">
-            <div class="space-y-4">
-                <div>
-                    <h3 class="font-semibold text-gray-800 mb-2">1. Установите библиотеку:</h3>
-                    <code class="block bg-gray-100 p-2 rounded text-sm">pip install telethon</code>
-                </div>
-
-                <div>
-                    <h3 class="font-semibold text-gray-800 mb-2">2. Создайте файл create_session.py:</h3>
-                    <textarea id="script-content" readonly class="w-full h-64 p-3 bg-gray-100 rounded text-sm font-mono"
-                        style="font-family: monospace;">from telethon import TelegramClient
-import asyncio
-
-async def create_session():
-    print("=" * 50)
-    print("Создание Telegram Session файла")
-    print("=" * 50)
-    print()
-    
-    api_id = int(input("API ID: "))
-    api_hash = input("API Hash: ")
-    phone = input("Телефон (+7...): ")
-    
-    session_name = f"account_{phone.replace('+', '')}"
-    
-    print(f"\nСоздание сессии: {session_name}.session")
-    print("Код будет отправлен в Telegram...")
-    
-    client = TelegramClient(session_name, api_id, api_hash)
-    
-    await client.start(phone)
-    
-    me = await client.get_me()
-    print(f"\n✅ Сессия успешно создана!")
-    print(f"📁 Файл: {session_name}.session")
-    print(f"👤 Вы авторизованы как: {me.first_name}")
-    
-    if me.username:
-        print(f"🔗 Username: @{me.username}")
-    
-    await client.disconnect()
-
-if __name__ == "__main__":
-    asyncio.run(create_session())</textarea>
-                </div>
-
-                <div>
-                    <h3 class="font-semibold text-gray-800 mb-2">3. Запустите скрипт:</h3>
-                    <code class="block bg-gray-100 p-2 rounded text-sm">python create_session.py</code>
-                </div>
-
-                <div>
-                    <h3 class="font-semibold text-gray-800 mb-2">4. Загрузите файлы:</h3>
-                    <p class="text-gray-600 text-sm">После создания .session файлов, загрузите их вместе с CSV через
-                        Способ 1</p>
-                </div>
-            </div>
-
-            <div class="flex gap-3 mt-6">
-                <button onclick="copyScript()"
-                    class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md font-medium transition">
-                    Скопировать скрипт
-                </button>
-                <button onclick="closeInstructionModal()"
-                    class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-md font-medium transition">
-                    Закрыть
-                </button>
-            </div>
         </div>
     </div>
 </div>
 
 <script>
-    let currentAccountId = null;
-
     // Load accounts on page load
     loadAccounts();
 
-    // Tab switching
-    function switchTab(tab) {
-        document.querySelectorAll('.tab-button').forEach(btn => {
-            btn.classList.remove('border-blue-500', 'text-blue-600');
-            btn.classList.add('border-transparent', 'text-gray-600');
-        });
+    // Toast notification function
+    function showToast(message, type = 'success') {
+        const toast = document.getElementById('toast');
+        const icon = document.getElementById('toast-icon');
+        const messageEl = document.getElementById('toast-message');
 
-        document.querySelectorAll('.tab-content').forEach(content => {
-            content.classList.add('hidden');
-        });
+        const icons = {
+            success: '✅',
+            error: '❌',
+            info: 'ℹ️',
+            warning: '⚠️'
+        };
 
-        if (tab === 'csv') {
-            document.getElementById('tab-csv').classList.add('border-blue-500', 'text-blue-600');
-            document.getElementById('csv-tab').classList.remove('hidden');
-        } else {
-            document.getElementById('tab-ui').classList.add('border-blue-500', 'text-blue-600');
-            document.getElementById('ui-tab').classList.remove('hidden');
-        }
+        icon.textContent = icons[type] || icons.info;
+        messageEl.textContent = message;
+
+        toast.classList.remove('hidden');
+
+        setTimeout(() => {
+            toast.classList.add('hidden');
+        }, 3000);
     }
 
     // Modal functions
     function openImportModal() {
         document.getElementById('importModal').classList.remove('hidden');
         document.getElementById('importModal').classList.add('flex');
+
+        // Reset and default to ZIP tab
+        switchTab('zip');
+        document.getElementById('zip-file').value = '';
+        document.getElementById('import-status').classList.add('hidden');
     }
 
     function closeImportModal() {
@@ -361,52 +273,45 @@ if __name__ == "__main__":
         document.getElementById('importModal').classList.remove('flex');
     }
 
-    function closeCodeModal() {
-        document.getElementById('codeModal').classList.add('hidden');
-        document.getElementById('codeModal').classList.remove('flex');
+    function switchTab(tab) {
+        // Update tab styles
+        if (tab === 'zip') {
+            document.getElementById('tab-zip').className = 'border-blue-500 text-blue-600 w-1/2 py-4 px-1 text-center border-b-2 font-medium text-sm';
+            document.getElementById('tab-manual').className = 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 w-1/2 py-4 px-1 text-center border-b-2 font-medium text-sm cursor-pointer';
+            document.getElementById('content-zip').classList.remove('hidden');
+            document.getElementById('content-manual').classList.add('hidden');
+        } else {
+            document.getElementById('tab-zip').className = 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 w-1/2 py-4 px-1 text-center border-b-2 font-medium text-sm cursor-pointer';
+            document.getElementById('tab-manual').className = 'border-blue-500 text-blue-600 w-1/2 py-4 px-1 text-center border-b-2 font-medium text-sm';
+            document.getElementById('content-zip').classList.add('hidden');
+            document.getElementById('content-manual').classList.remove('hidden');
+        }
     }
 
-    function closePasswordModal() {
-        document.getElementById('passwordModal').classList.add('hidden');
-        document.getElementById('passwordModal').classList.remove('flex');
-    }
+    // Import accounts
+    async function importAccounts() {
+        const zipFile = document.getElementById('zip-file').files[0];
+        const autoAssignProxy = document.getElementById('auto-assign-proxy-zip').checked;
 
-    function showInstructionModal() {
-        document.getElementById('instructionModal').classList.remove('hidden');
-        document.getElementById('instructionModal').classList.add('flex');
-    }
-
-    function closeInstructionModal() {
-        document.getElementById('instructionModal').classList.add('hidden');
-        document.getElementById('instructionModal').classList.remove('flex');
-    }
-
-    function copyScript() {
-        const scriptContent = document.getElementById('script-content');
-        scriptContent.select();
-        document.execCommand('copy');
-        alert('Скрипт скопирован в буфер обмена!');
-    }
-
-    // CSV Import
-    async function importCSV() {
-        const csvFile = document.getElementById('csv-file').files[0];
-        const sessionFiles = document.getElementById('session-files').files;
-
-        if (!csvFile || sessionFiles.length === 0) {
-            alert('Выберите CSV файл и session файлы');
+        if (!zipFile) {
+            showToast('Выберите ZIP файл', 'error');
             return;
         }
 
         const formData = new FormData();
-        formData.append('csv_file', csvFile);
+        formData.append('file', zipFile);
+        formData.append('auto_assign_proxy', autoAssignProxy);
 
-        for (let i = 0; i < sessionFiles.length; i++) {
-            formData.append('session_files', sessionFiles[i]);
-        }
+        const statusDiv = document.getElementById('import-status');
+        const statusText = document.getElementById('import-status-text');
+
+        statusDiv.classList.remove('hidden');
+        statusDiv.querySelector('div').className = 'p-4 rounded-lg bg-blue-50';
+        statusText.className = 'text-sm font-medium text-blue-800';
+        statusText.textContent = 'Импорт аккаунтов...';
 
         try {
-            const response = await fetch('/api/accounts/import-csv', {
+            const response = await fetch('/api/accounts/import', {
                 method: 'POST',
                 body: formData
             });
@@ -414,191 +319,118 @@ if __name__ == "__main__":
             const data = await response.json();
 
             if (response.ok) {
-                alert(`Импортировано: ${data.imported} аккаунтов\nОшибок: ${data.errors.length}`);
-                if (data.errors.length > 0) {
-                    console.log('Errors:', data.errors);
+                statusDiv.querySelector('div').className = 'p-4 rounded-lg bg-green-50';
+                statusText.className = 'text-sm font-medium text-green-800';
+
+                let message = `✅ Импортировано: ${data.imported} аккаунтов`;
+                if (autoAssignProxy && data.proxies_assigned) {
+                    message += `\n🌐 Назначено прокси: ${data.proxies_assigned}`;
                 }
-                closeImportModal();
-                loadAccounts();
+                if (data.errors && data.errors.length > 0) {
+                    message += `\n⚠️ Ошибок: ${data.errors.length}`;
+                    console.log('Import errors:', data.errors);
+                }
+
+                statusText.textContent = message;
+
+                // Reload accounts after 1.5 seconds
+                setTimeout(() => {
+                    closeImportModal();
+                    loadAccounts();
+                }, 1500);
             } else {
-                alert(`Ошибка: ${data.detail}`);
+                statusDiv.querySelector('div').className = 'p-4 rounded-lg bg-red-50';
+                statusText.className = 'text-sm font-medium text-red-800';
+                statusText.textContent = `❌ Ошибка: ${data.detail || data.message}`;
             }
         } catch (error) {
-            alert(`Ошибка: ${error.message}`);
+            statusDiv.querySelector('div').className = 'p-4 rounded-lg bg-red-50';
+            statusText.className = 'text-sm font-medium text-red-800';
+            statusText.textContent = `❌ Ошибка: ${error.message}`;
         }
     }
 
-    // Test Proxy
-    async function testProxy() {
-        const host = document.getElementById('proxy-host').value;
-        const port = document.getElementById('proxy-port').value;
+    // Manual Account Creation
+    async function createAccount() {
+        const phone = document.getElementById('manual-phone').value;
+        const apiId = document.getElementById('manual-api-id').value;
+        const apiHash = document.getElementById('manual-api-hash').value;
+        const sessionString = document.getElementById('manual-session').value;
+        const autoAssignProxy = document.getElementById('auto-assign-proxy-manual').checked;
 
-        if (!host || !port) {
-            alert('Укажите хост и порт прокси');
+        if (!phone || !apiId || !apiHash) {
+            showToast('Заполните обязательные поля', 'error');
             return;
         }
 
-        const statusEl = document.getElementById('proxy-status');
-        statusEl.textContent = 'Проверка...';
-        statusEl.className = 'ml-2 text-sm text-gray-600';
+        const statusDiv = document.getElementById('import-status');
+        const statusText = document.getElementById('import-status-text');
+
+        statusDiv.classList.remove('hidden');
+        statusDiv.querySelector('div').className = 'p-4 rounded-lg bg-blue-50';
+        statusText.className = 'text-sm font-medium text-blue-800';
+        statusText.textContent = 'Создание аккаунта...';
 
         try {
-            const response = await fetch('/api/accounts/test-proxy', {
+            const response = await fetch('/api/accounts/create', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json'
+                },
                 body: JSON.stringify({
-                    type: document.getElementById('proxy-type').value,
-                    host: host,
-                    port: parseInt(port),
-                    username: document.getElementById('proxy-user').value,
-                    password: document.getElementById('proxy-pass').value
-                })
-            });
-
-            const data = await response.json();
-
-            if (data.status === 'ok') {
-                statusEl.textContent = `✅ OK (${data.ping_ms}ms)`;
-                statusEl.className = 'ml-2 text-sm text-green-600';
-            } else {
-                statusEl.textContent = `❌ ${data.error}`;
-                statusEl.className = 'ml-2 text-sm text-red-600';
-            }
-        } catch (error) {
-            statusEl.textContent = `❌ ${error.message}`;
-            statusEl.className = 'ml-2 text-sm text-red-600';
-        }
-    }
-
-    // Start Auth
-    async function startAuth() {
-        const apiId = document.getElementById('auth-api-id').value;
-        const apiHash = document.getElementById('auth-api-hash').value;
-        const phone = document.getElementById('auth-phone').value;
-
-        if (!apiId || !apiHash || !phone) {
-            alert('Заполните все обязательные поля');
-            return;
-        }
-
-        const proxy = {};
-        const proxyHost = document.getElementById('proxy-host').value;
-        if (proxyHost) {
-            proxy.type = document.getElementById('proxy-type').value;
-            proxy.host = proxyHost;
-            proxy.port = parseInt(document.getElementById('proxy-port').value);
-            proxy.username = document.getElementById('proxy-user').value;
-            proxy.password = document.getElementById('proxy-pass').value;
-        }
-
-        try {
-            const response = await fetch('/api/accounts/auth/start', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    api_id: apiId,
-                    api_hash: apiHash,
                     phone: phone,
-                    proxy: Object.keys(proxy).length > 0 ? proxy : null
+                    api_id: parseInt(apiId),
+                    api_hash: apiHash,
+                    session_string: sessionString || null,
+                    auto_assign_proxy: autoAssignProxy
                 })
             });
 
             const data = await response.json();
 
-            if (response.ok && data.status === 'code_sent') {
-                currentAccountId = data.account_id;
-                document.getElementById('masked-phone').textContent = phone;
-                closeImportModal();
-                document.getElementById('codeModal').classList.remove('hidden');
-                document.getElementById('codeModal').classList.add('flex');
+            if (response.ok) {
+                statusDiv.querySelector('div').className = 'p-4 rounded-lg bg-green-50';
+                statusText.className = 'text-sm font-medium text-green-800';
+
+                let msg = `✅ Аккаунт ${data.account.phone} создан`;
+                if (data.proxy) {
+                    msg += `\n🌐 Прокси: ${data.proxy.host}`;
+                }
+                statusText.textContent = msg;
+
+                setTimeout(() => {
+                    closeImportModal();
+                    loadAccounts();
+                }, 1500);
             } else {
-                alert(`Ошибка: ${data.detail || data.error}`);
+                statusDiv.querySelector('div').className = 'p-4 rounded-lg bg-red-50';
+                statusText.className = 'text-sm font-medium text-red-800';
+                statusText.textContent = `❌ Ошибка: ${data.detail || data.message}`;
             }
         } catch (error) {
-            alert(`Ошибка: ${error.message}`);
+            statusDiv.querySelector('div').className = 'p-4 rounded-lg bg-red-50';
+            statusText.className = 'text-sm font-medium text-red-800';
+            statusText.textContent = `❌ Ошибка: ${error.message}`;
         }
     }
 
-    // Submit Code
-    async function submitCode() {
-        const code = document.getElementById('auth-code').value;
+    // Global variable to store accounts for modal
+    let currentAccountsData = [];
 
-        if (!code) {
-            alert('Введите код');
-            return;
-        }
-
-        try {
-            const response = await fetch('/api/accounts/auth/code', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    account_id: currentAccountId,
-                    code: code
-                })
-            });
-
-            const data = await response.json();
-
-            if (data.status === 'success') {
-                alert('Аккаунт успешно добавлен!');
-                closeCodeModal();
-                loadAccounts();
-            } else if (data.status === 'need_2fa') {
-                closeCodeModal();
-                document.getElementById('passwordModal').classList.remove('hidden');
-                document.getElementById('passwordModal').classList.add('flex');
-            } else {
-                alert(`Ошибка: ${data.error}`);
-            }
-        } catch (error) {
-            alert(`Ошибка: ${error.message}`);
-        }
-    }
-
-    // Submit Password
-    async function submitPassword() {
-        const password = document.getElementById('auth-password').value;
-
-        if (!password) {
-            alert('Введите пароль');
-            return;
-        }
-
-        try {
-            const response = await fetch('/api/accounts/auth/password', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    account_id: currentAccountId,
-                    password: password
-                })
-            });
-
-            const data = await response.json();
-
-            if (data.status === 'success') {
-                alert('Аккаунт успешно добавлен!');
-                closePasswordModal();
-                loadAccounts();
-            } else {
-                alert(`Ошибка: ${data.error}`);
-            }
-        } catch (error) {
-            alert(`Ошибка: ${error.message}`);
-        }
-    }
-
-    // Load Accounts
+    // Load accounts
     async function loadAccounts() {
         try {
             const response = await fetch('/api/accounts/list');
             const data = await response.json();
 
+            // Safely get accounts array from response
+            const accounts = data.accounts || data.data || [];
+            currentAccountsData = accounts; // Save for modal usage
+
             const tbody = document.getElementById('accounts-table');
             tbody.innerHTML = '';
 
-            if (data.accounts.length === 0) {
+            if (accounts.length === 0) {
                 tbody.innerHTML = `
                 <tr>
                     <td colspan="5" class="px-6 py-12 text-center">
@@ -613,65 +445,279 @@ if __name__ == "__main__":
                 </tr>
             `;
             } else {
-                data.accounts.forEach(acc => {
+                accounts.forEach(account => {
                     const row = document.createElement('tr');
                     row.className = 'hover:bg-gray-50';
+                    row.setAttribute('data-account-id', account.id);
 
-                    const statusIcon = acc.status === 'active' ? '🟢' : '🔴';
-                    // Handle proxy display - check if proxy exists and has required fields
-                    let proxyText = '-';
-                    if (acc.proxy && acc.proxy.host && acc.proxy.port) {
-                        proxyText = `${acc.proxy.host}:${acc.proxy.port}`;
+                    // Profile display (avatar + phone + name)
+                    const avatarUrl = account.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(account.phone || 'User');
+                    const displayName = account.first_name ? `${account.first_name} ${account.last_name || ''}`.trim() : '';
+
+                    const profileHtml = `
+                        <div class="flex items-center">
+                            <img src="${avatarUrl}" alt="Avatar" class="w-10 h-10 rounded-full mr-3" onerror="this.src='https://ui-avatars.com/api/?name=User'">
+                            <div>
+                                <div class="font-medium text-gray-900">${account.phone || 'N/A'}</div>
+                                ${displayName ? `<div class="text-sm text-gray-500">${displayName}</div>` : ''}
+                            </div>
+                        </div>
+                    `;
+
+                    // Status badge
+                    let statusBadge = '';
+                    if (account.status === 'active') {
+                        statusBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Active</span>';
+                    } else if (account.status === 'banned') {
+                        statusBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Banned</span>';
+                    } else if (account.status === 'reserve' || account.status === 'reserved') {
+                        statusBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Reserved</span>';
+                    } else {
+                        statusBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">Unknown</span>';
                     }
-                    const lastActive = acc.last_active ? new Date(acc.last_active).toLocaleString('ru-RU') : 'Никогда';
+
+                    // Setup status badge with channel link
+                    let setupBadge = '';
+                    if (account.setup_status === 'completed') {
+                        const channelLink = account.personal_channel_url || '#';
+                        setupBadge = `
+                            <div>
+                                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">Done</span>
+                                ${account.personal_channel_url ? `<br><a href="${channelLink}" target="_blank" class="text-xs text-blue-600 hover:underline mt-1 inline-block">📢 Канал</a>` : ''}
+                            </div>
+                        `;
+                    } else if (account.setup_status === 'pending') {
+                        setupBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Pending</span>';
+                    } else if (account.setup_status === 'failed') {
+                        setupBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Failed</span>';
+                    } else {
+                        setupBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">Not started</span>';
+                    }
+
+                    // Proxy display
+                    let proxyHtml = '';
+                    if (account.proxy && account.proxy.host) {
+                        proxyHtml = `
+                            <div class="text-sm">
+                                <span class="font-mono text-gray-700">${account.proxy.host}:${account.proxy.port}</span>
+                                <br>
+                                <span class="text-xs text-gray-500">${account.proxy.type ? account.proxy.type.toUpperCase() : 'N/A'}</span>
+                            </div>
+                        `;
+                    } else {
+                        proxyHtml = `
+                            <div class="flex items-center">
+                                <span class="text-sm text-red-600 font-medium mr-2">Нет прокси</span>
+                                <button onclick="assignManualProxy(${account.id})" 
+                                    class="text-blue-500 hover:text-blue-700 p-1 rounded hover:bg-blue-50 transition"
+                                    title="Назначить прокси">
+                                    🔗
+                                </button>
+                            </div>
+                        `;
+                    }
 
                     row.innerHTML = `
-                    <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">${acc.phone}</td>
-                    <td class="px-6 py-4 whitespace-nowrap">${statusIcon} ${acc.status}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-gray-500">${proxyText}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-gray-500 text-sm">${lastActive}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm">
-                        <button onclick="deleteAccount(${acc.id})" class="text-red-600 hover:text-red-800 font-medium">
-                            Удалить
-                        </button>
-                    </td>
-                `;
+                        <td class="px-6 py-4 whitespace-nowrap">${profileHtml}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${statusBadge}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${setupBadge}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${proxyHtml}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            <button onclick="openAccountDetails(${account.id})" 
+                                class="text-gray-600 hover:text-gray-800 font-medium mr-3"
+                                title="Подробнее">
+                                👁️
+                            </button>
+                            <button onclick="checkAccountStatus(${account.id})" 
+                                class="text-blue-600 hover:text-blue-800 font-medium mr-3"
+                                title="Проверить статус">
+                                🔍
+                            </button>
+                            <button onclick="runSetup(${account.id})" 
+                                class="text-green-600 hover:text-green-800 font-medium mr-3"
+                                title="Запустить Setup"
+                                ${account.setup_status === 'completed' ? 'disabled class="text-gray-400 cursor-not-allowed"' : ''}>
+                                ⚙️
+                            </button>
+                            <button onclick="deleteAccount(${account.id})" 
+                                class="text-red-600 hover:text-red-800 font-medium"
+                                title="Удалить">
+                                🗑️
+                            </button>
+                        </td>
+                    `;
 
                     tbody.appendChild(row);
                 });
             }
 
-            // Update stats
-            document.getElementById('total-accounts').textContent = data.accounts.length;
-            document.getElementById('active-accounts').textContent = data.accounts.filter(a => a.status === 'active').length;
-            document.getElementById('blocked-accounts').textContent = 0;
-            document.getElementById('pending-accounts').textContent = 0;
+            // Update stats - use accounts array
+            const totalAccounts = accounts.length;
+            const activeAccounts = accounts.filter(a => a.status === 'active').length;
+            const setupCompleted = accounts.filter(a => a.setup_status === 'completed').length;
+            const withProxy = accounts.filter(a => a.proxy && a.proxy.host).length;
+
+            document.getElementById('total-accounts').textContent = totalAccounts;
+            document.getElementById('active-accounts').textContent = activeAccounts;
+            document.getElementById('setup-completed').textContent = setupCompleted;
+            document.getElementById('with-proxy').textContent = withProxy;
 
         } catch (error) {
             console.error('Error loading accounts:', error);
+            showToast(`Ошибка загрузки аккаунтов: ${error.message}`, 'error');
         }
     }
 
-    // Delete Account
-    async function deleteAccount(id) {
+    // Check account status
+    async function checkAccountStatus(accountId) {
+        showToast('Проверка статуса аккаунта...', 'info');
+
+        try {
+            const response = await fetch(`/api/accounts/${accountId}/check-status`, {
+                method: 'POST'
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                showToast(`Статус: ${data.status}`, 'success');
+                await loadAccounts();
+            } else {
+                showToast(`Ошибка: ${data.detail || data.message}`, 'error');
+            }
+        } catch (error) {
+            showToast(`Ошибка: ${error.message}`, 'error');
+        }
+    }
+
+    // Run setup
+    async function runSetup(accountId) {
+        if (!confirm('Запустить автоматическую настройку аккаунта?')) {
+            return;
+        }
+
+        showToast('Запуск setup...', 'info');
+
+        try {
+            const response = await fetch(`/api/accounts/${accountId}/run-setup`, {
+                method: 'POST'
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                showToast('Setup запущен! Проверьте статус через несколько минут', 'success');
+                await loadAccounts();
+            } else {
+                showToast(`Ошибка: ${data.detail || data.message}`, 'error');
+            }
+        } catch (error) {
+            showToast(`Ошибка: ${error.message}`, 'error');
+        }
+    }
+
+    // Account Details Modal Functions
+    function openAccountDetails(accountId) {
+        const account = currentAccountsData.find(a => a.id === accountId);
+        if (!account) return;
+
+        const modal = document.getElementById('accountDetailsModal');
+
+        // Populate fields
+        const avatarUrl = account.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(account.phone || 'User');
+        document.getElementById('modal-avatar').src = avatarUrl;
+
+        const displayName = account.first_name ? `${account.first_name} ${account.last_name || ''}`.trim() : (account.phone || 'Unknown');
+        document.getElementById('modal-name').textContent = displayName;
+        document.getElementById('modal-phone').textContent = account.phone || '-';
+        document.getElementById('modal-bio').textContent = account.bio || 'Нет описания';
+
+        // Modal Badges
+        const badgesContainer = document.getElementById('modal-badges');
+        let statusBadge = '';
+        if (account.status === 'active') statusBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Active</span>';
+        else if (account.status === 'banned') statusBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Banned</span>';
+        else if (account.status === 'reserve' || account.status === 'reserved') statusBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Reserved</span>';
+        else statusBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">Unknown</span>';
+
+        let workModeBadge = account.work_mode ? `<span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-50 text-blue-600 border border-blue-200">${account.work_mode}</span>` : '';
+
+        badgesContainer.innerHTML = statusBadge + workModeBadge;
+
+        // Setup Info
+        const setupContainer = document.getElementById('modal-setup');
+        if (account.setup_status === 'completed') {
+            const link = account.personal_channel_url ? `<a href="${account.personal_channel_url}" target="_blank" class="text-blue-600 hover:underline block mt-1">Перейти в канал</a>` : '';
+            setupContainer.innerHTML = `<span class="text-green-600 font-medium">Completed</span>${link}`;
+        } else {
+            setupContainer.innerHTML = `<span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">${account.setup_status || 'Pending'}</span>`;
+        }
+
+        // Proxy Info
+        const proxyContainer = document.getElementById('modal-proxy');
+        if (account.proxy && account.proxy.host) {
+            proxyContainer.innerHTML = `
+                <div class="font-mono text-sm">${account.proxy.host}:${account.proxy.port}</div>
+                <div class="text-xs text-gray-500">${account.proxy.type} | ID: ${account.proxy.id}</div>
+            `;
+        } else {
+            proxyContainer.innerHTML = `
+                <span class="text-red-500">Нет прокси</span>
+                <button onclick="assignManualProxy(${account.id}); closeAccountDetails()" class="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200">Назначить</button>
+            `;
+        }
+
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+
+    function closeAccountDetails() {
+        const modal = document.getElementById('accountDetailsModal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+
+    // Manual Proxy Assignment
+    async function assignManualProxy(accountId) {
+        showToast('Ищу свободный прокси...', 'info');
+        try {
+            const response = await fetch(`/api/accounts/${accountId}/assign-proxy`, {
+                method: 'POST'
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                showToast(`✅ Прокси назначен: ${data.proxy.host}:${data.proxy.port}`, 'success');
+                await loadAccounts();
+            } else {
+                showToast(`❌ Ошибка: ${data.detail || data.message}`, 'error');
+            }
+        } catch (error) {
+            showToast(`❌ Ошибка сети: ${error.message}`, 'error');
+        }
+    }
+
+    // Delete account
+    async function deleteAccount(accountId) {
         if (!confirm('Удалить аккаунт? Это действие нельзя отменить.')) {
             return;
         }
 
         try {
-            const response = await fetch(`/api/accounts/${id}`, {
+            const response = await fetch(`/api/accounts/${accountId}`, {
                 method: 'DELETE'
             });
 
             if (response.ok) {
-                alert('Аккаунт удалён');
-                loadAccounts();
+                showToast('Аккаунт удален', 'success');
+                await loadAccounts();
             } else {
                 const data = await response.json();
-                alert(`Ошибка: ${data.detail}`);
+                showToast(`Ошибка: ${data.detail || data.message}`, 'error');
             }
         } catch (error) {
-            alert(`Ошибка: ${error.message}`);
+            showToast(`Ошибка: ${error.message}`, 'error');
         }
     }
 </script>
