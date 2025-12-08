@@ -256,9 +256,9 @@ async def list_accounts():
          # DEBUG TOKEN
         print(f"🔑 DEBUG: Token being used: {directus.token}")
         print(f"🔑 DEBUG: Headers: {directus.client.headers}")
-        # Get accounts with proxies (using proxy_id field)
+        # Get accounts with proxies (using proxy_id field) and setup template
         response = await directus.client.get("/items/accounts", params={
-            "fields": "id,phone,first_name,last_name,bio,avatar_url,status,setup_status,personal_channel_url,work_mode,proxy_id.id,proxy_id.host,proxy_id.port,proxy_id.type",
+            "fields": "id,phone,first_name,last_name,bio,avatar_url,status,setup_status,personal_channel_url,work_mode,warmup_mode,date_updated,setup_template_id.id,setup_template_id.name,proxy_id.id,proxy_id.host,proxy_id.port,proxy_id.type",
             "sort": "-date_created"
         })
         
@@ -448,4 +448,51 @@ async def release_proxy(account_id: int):
         raise
     except Exception as e:
         logger.error(f"Error releasing proxy: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class AccountUpdate(BaseModel):
+    work_mode: Optional[str] = None
+    warmup_mode: Optional[bool] = None
+    status: Optional[str] = None
+    setup_template_id: Optional[int] = None
+
+@router.patch("/{account_id}")
+async def update_account(account_id: int, account_update: AccountUpdate):
+    """
+    Update account fields.
+    """
+    try:
+        # Ensure Directus is logged in
+        if not directus.token:
+            await directus.login()
+            
+        # Prepare update data (only include fields that are not None)
+        update_data = {}
+        if account_update.work_mode is not None:
+            update_data["work_mode"] = account_update.work_mode
+        if account_update.warmup_mode is not None:
+            update_data["warmup_mode"] = account_update.warmup_mode
+        if account_update.status is not None:
+            update_data["status"] = account_update.status
+        if account_update.setup_template_id is not None:
+            update_data["setup_template_id"] = account_update.setup_template_id
+            
+        if not update_data:
+            raise HTTPException(status_code=400, detail="No fields to update")
+            
+        # Update account in Directus
+        updated_account = await directus.update_item("accounts", account_id, update_data)
+        
+        logger.info(f"✓ Updated account {account_id} with {update_data}")
+        
+        return {
+            "status": "success",
+            "account": updated_account
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating account: {e}")
         raise HTTPException(status_code=500, detail=str(e))

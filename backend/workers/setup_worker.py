@@ -29,9 +29,9 @@ from telethon.sessions import StringSession
 from telethon.tl.functions.channels import (
     CreateChannelRequest,
     EditPhotoRequest,
-    UpdateUsernameRequest,
-    ExportInviteRequest
+    UpdateUsernameRequest
 )
+from telethon.tl.functions.messages import ExportChatInviteRequest
 from telethon.tl.functions.account import UpdateProfileRequest
 from telethon.tl.types import InputChatUploadedPhoto
 
@@ -70,7 +70,7 @@ async def get_pending_account() -> Optional[Dict]:
         params = {
             "filter[status][_eq]": "active",
             "filter[setup_status][_eq]": "pending",
-            "fields": "id,phone,session_string,api_id,api_hash,user_created",
+            "fields": "id,phone,session_string,api_id,api_hash,user_created,setup_template_id",
             "limit": 1
         }
         
@@ -90,28 +90,34 @@ async def get_pending_account() -> Optional[Dict]:
         return None
 
 
-async def get_all_setup_templates() -> List[Dict]:
+async def get_template_by_id(template_id: int) -> Optional[Dict]:
     """
-    Получить все шаблоны настройки из коллекции setup_templates.
+    Получить шаблон по ID.
     
+    Args:
+        template_id: ID шаблона
+        
     Returns:
-        Список шаблонов
+        Template dictionary или None
     """
     try:
         params = {
-            "fields": "*",
-            "limit": -1  # Получить все
+            "fields": "*"
         }
         
-        response = await directus.client.get("/items/setup_templates", params=params)
-        templates = response.json().get('data', [])
+        response = await directus.client.get(f"/items/setup_templates/{template_id}", params=params)
+        template = response.json().get('data')
         
-        logger.info(f"[Setup] Загружено {len(templates)} шаблонов")
-        return templates
-        
+        if template:
+            logger.info(f"[Setup] Загружен шаблон: {template.get('name', 'Unknown')}")
+            return template
+        else:
+            logger.error(f"[Setup] Шаблон с ID {template_id} не найден")
+            return None
+            
     except Exception as e:
-        logger.error(f"[Setup] Ошибка получения шаблонов: {e}")
-        return []
+        logger.error(f"[Setup] Ошибка получения шаблона {template_id}: {e}")
+        return None
 
 
 async def download_template_files(template: Dict) -> Dict[str, Optional[Path]]:
@@ -278,7 +284,7 @@ async def create_channel_with_post(
             logger.warning(f"[Setup] Не удалось создать публичный username: {e}")
             logger.info(f"[Setup] Использую приватную ссылку...")
             
-            invite = await client(ExportInviteRequest(channel))
+            invite = await client(ExportChatInviteRequest(peer=channel))
             channel_link = invite.link
             logger.info(f"[Setup] ✓ Создана приватная ссылка: {channel_link}")
         
@@ -423,7 +429,7 @@ async def setup_account_cycle():
     """
     Основной цикл настройки аккаунта:
     1. Получить pending аккаунт
-    2. Получить случайный шаблон
+    2. Получить шаблон по setup_template_id или вернуть ошибку
     3. Скачать файлы
     4. Настроить профиль аккаунта
     5. Создать канал с постом
@@ -443,16 +449,22 @@ async def setup_account_cycle():
         account_id = account['id']
         phone = account['phone']
         
-        # 2. Получить все шаблоны и выбрать случайный
-        templates = await get_all_setup_templates()
+        # 2. Получить шаблон по setup_template_id
+        template_id = account.get('setup_template_id')
         
-        if not templates:
-            logger.error("[Setup] Нет доступных шаблонов!")
-            await mark_account_failed(account_id, "Нет доступных шаблонов")
+        if not template_id:
+            logger.error(f"[Setup] Для аккаунта {phone} не выбран шаблон!")
+            await mark_account_failed(account_id, "Шаблон не выбран")
             return
         
-        template = random.choice(templates)
-        logger.info(f"[Setup] Выбран шаблон: {template.get('channel_title', 'Unknown')}")
+        template = await get_template_by_id(template_id)
+        
+        if not template:
+            logger.error(f"[Setup] Шаблон с ID {template_id} не найден для аккаунта {phone}")
+            await mark_account_failed(account_id, "Шаблон не найден")
+            return
+        
+        logger.info(f"[Setup] Используется шаблон: {template.get('name', 'Unknown')} (ID: {template_id})")
         
         # 3. Скачать файлы из шаблона
         files = await download_template_files(template)
@@ -518,7 +530,7 @@ async def setup_account_cycle():
             
             # 8. Финализировать в Directus
             logs = f"""Успешно настроен аккаунт {phone}
-Шаблон: {template.get('channel_title', 'Unknown')}
+Шаблон: {template.get('name', 'Unknown')} (ID: {template_id})
 Канал: {channel_link}
 Дата: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"""
             
@@ -526,6 +538,7 @@ async def setup_account_cycle():
             
             logger.info(f"[Setup] ✓✓✓ Аккаунт {phone} успешно настроен!")
             logger.info(f"[Setup]     Канал: {channel_link}")
+            logger.info(f"[Setup]     Шаблон: {template.get('name', 'Unknown')} (ID: {template_id})")
             
         except FloodWaitError as e:
             logger.warning(f"[Setup] FloodWait для аккаунта {phone}: {e.seconds}s")

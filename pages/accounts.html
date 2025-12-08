@@ -7,8 +7,8 @@
         </button>
     </div>
 
-    <!-- Stats Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+    <!-- Stats Cards - Updated to 2 rows for better layout -->
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
         <div class="bg-white rounded-lg shadow p-4">
             <p class="text-sm text-gray-600">Всего аккаунтов</p>
             <p class="text-2xl font-bold text-gray-900" id="total-accounts">0</p>
@@ -25,6 +25,14 @@
             <p class="text-sm text-gray-600">С прокси</p>
             <p class="text-2xl font-bold text-purple-600" id="with-proxy">0</p>
         </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <p class="text-sm text-gray-600">Забанены</p>
+            <p class="text-2xl font-bold text-red-600" id="banned-accounts">0</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <p class="text-sm text-gray-600">В резерве</p>
+            <p class="text-2xl font-bold text-yellow-600" id="reserve-accounts">0</p>
+        </div>
     </div>
 
     <!-- Accounts Table -->
@@ -36,11 +44,19 @@
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Профиль</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Роль</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Прогрев</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Статус</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Setup</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Шаблон</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Прокси</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Проверка</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Действия</th>
                     </tr>
@@ -93,6 +109,10 @@
                     <div>
                         <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider">Setup Status</h4>
                         <div id="modal-setup" class="mt-1"></div>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider">Шаблон</h4>
+                        <div id="modal-template" class="mt-1"></div>
                     </div>
                     <div>
                         <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider">Proxy</h4>
@@ -225,6 +245,45 @@
         <div class="p-4 bg-gray-50 border-t border-gray-200 flex justify-end">
             <button onclick="closeImportModal()" class="text-gray-600 hover:text-gray-800 font-medium text-sm">
                 Закрыть
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Setup Account Modal -->
+<div id="setupAccountModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div class="flex justify-between items-center p-6 border-b">
+            <h2 class="text-2xl font-bold text-gray-800">Настройка аккаунта</h2>
+            <button onclick="closeSetupAccountModal()" class="text-gray-500 hover:text-gray-700">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+
+        <div class="p-6">
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Номер телефона</label>
+                <p id="setup-account-phone" class="text-lg font-medium text-gray-900"></p>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Выберите шаблон</label>
+                <select id="setup-template-select" class="w-full p-2 border border-gray-300 rounded-md">
+                    <option value="">Загрузка шаблонов...</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="p-6 bg-gray-50 rounded-b-lg flex justify-end gap-3">
+            <button onclick="closeSetupAccountModal()"
+                class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-lg font-medium transition">
+                Отмена
+            </button>
+            <button onclick="startAccountSetup()" id="start-setup-btn"
+                class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition">
+                Начать настройку
             </button>
         </div>
     </div>
@@ -433,7 +492,7 @@
             if (accounts.length === 0) {
                 tbody.innerHTML = `
                 <tr>
-                    <td colspan="5" class="px-6 py-12 text-center">
+                    <td colspan="8" class="px-6 py-12 text-center">
                         <div class="text-gray-400">
                             <svg class="mx-auto h-12 w-12 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
@@ -444,129 +503,239 @@
                     </td>
                 </tr>
             `;
-            } else {
-                accounts.forEach(account => {
-                    const row = document.createElement('tr');
-                    row.className = 'hover:bg-gray-50';
-                    row.setAttribute('data-account-id', account.id);
+        } else {
+            accounts.forEach(account => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50';
+                row.setAttribute('data-account-id', account.id);
 
-                    // Profile display (avatar + phone + name)
-                    const avatarUrl = account.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(account.phone || 'User');
-                    const displayName = account.first_name ? `${account.first_name} ${account.last_name || ''}`.trim() : '';
+                // Profile display (avatar + phone + name)
+                const avatarUrl = account.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(account.phone || 'User');
+                const displayName = account.first_name ? `${account.first_name} ${account.last_name || ''}`.trim() : '';
 
-                    const profileHtml = `
-                        <div class="flex items-center">
-                            <img src="${avatarUrl}" alt="Avatar" class="w-10 h-10 rounded-full mr-3" onerror="this.src='https://ui-avatars.com/api/?name=User'">
-                            <div>
-                                <div class="font-medium text-gray-900">${account.phone || 'N/A'}</div>
-                                ${displayName ? `<div class="text-sm text-gray-500">${displayName}</div>` : ''}
-                            </div>
+                const profileHtml = `
+                    <div class="flex items-center">
+                        <img src="${avatarUrl}" alt="Avatar" class="w-10 h-10 rounded-full mr-3" onerror="this.src='https://ui-avatars.com/api/?name=User'">
+                        <div>
+                            <div class="font-medium text-gray-900">${account.phone || 'N/A'}</div>
+                            ${displayName ? `<div class="text-sm text-gray-500">${displayName}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+
+                // Role dropdown - Updated with proper options
+                const isDisabled = account.status === 'banned';
+                const disabledAttr = isDisabled ? 'disabled' : '';
+                const roleHtml = `
+                    <select 
+                        onchange="updateAccountRole(${account.id}, this.value)" 
+                        class="rounded border-gray-300 text-sm focus:ring-blue-500 focus:border-blue-500 ${isDisabled ? 'bg-gray-100 cursor-not-allowed' : ''}"
+                        ${disabledAttr}>
+                        <option value="">Не выбрана</option>
+                        <option value="commenter" ${account.work_mode === 'commenter' ? 'selected' : ''}>Commenter</option>
+                        <option value="listener" ${account.work_mode === 'listener' ? 'selected' : ''}>Listener</option>
+                        <option value="reserve" ${account.work_mode === 'reserve' ? 'selected' : ''}>Reserve</option>
+                    </select>
+                `;
+
+                // Warmup toggle - Fire icon
+                const warmupActive = account.warmup_mode === true;
+                const warmupHtml = `
+                    <button 
+                        onclick="toggleWarmupMode(${account.id}, ${warmupActive})"
+                        class="focus:outline-none ${isDisabled ? 'cursor-not-allowed opacity-50' : ''}"
+                        ${isDisabled ? 'disabled' : ''}>
+                        <span class="text-2xl ${warmupActive ? 'text-orange-500' : 'text-gray-400'}">
+                            ${warmupActive ? '🔥' : '🧊'}
+                        </span>
+                    </button>
+                `;
+
+                // Status badge
+                let statusBadge = '';
+                if (account.status === 'active') {
+                    statusBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Active</span>';
+                } else if (account.status === 'banned') {
+                    statusBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Banned</span>';
+                } else if (account.status === 'reserve' || account.status === 'reserved') {
+                    statusBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Reserved</span>';
+                } else {
+                    statusBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">Unknown</span>';
+                }
+
+                // Setup status badge with channel link
+                let setupBadge = '';
+                if (account.setup_status === 'completed') {
+                    const channelLink = account.personal_channel_url || '#';
+                    setupBadge = `
+                        <div>
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">Done</span>
+                            ${account.personal_channel_url ? `<br><a href="${channelLink}" target="_blank" class="text-xs text-blue-600 hover:underline mt-1 inline-block">📢 Канал</a>` : ''}
                         </div>
                     `;
+                } else if (account.setup_status === 'pending') {
+                    setupBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Pending</span>';
+                } else if (account.setup_status === 'failed') {
+                    setupBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Failed</span>';
+                } else {
+                    setupBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">Not started</span>';
+                }
 
-                    // Status badge
-                    let statusBadge = '';
-                    if (account.status === 'active') {
-                        statusBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Active</span>';
-                    } else if (account.status === 'banned') {
-                        statusBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Banned</span>';
-                    } else if (account.status === 'reserve' || account.status === 'reserved') {
-                        statusBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Reserved</span>';
-                    } else {
-                        statusBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">Unknown</span>';
-                    }
+                // Template display
+                let templateHtml = '';
+                if (account.setup_template_id && account.setup_template_id.name) {
+                    templateHtml = `<span class="text-sm text-gray-700">${account.setup_template_id.name}</span>`;
+                } else {
+                    templateHtml = `<span class="text-sm text-gray-400">Не выбран</span>`;
+                }
 
-                    // Setup status badge with channel link
-                    let setupBadge = '';
-                    if (account.setup_status === 'completed') {
-                        const channelLink = account.personal_channel_url || '#';
-                        setupBadge = `
-                            <div>
-                                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">Done</span>
-                                ${account.personal_channel_url ? `<br><a href="${channelLink}" target="_blank" class="text-xs text-blue-600 hover:underline mt-1 inline-block">📢 Канал</a>` : ''}
-                            </div>
-                        `;
-                    } else if (account.setup_status === 'pending') {
-                        setupBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Pending</span>';
-                    } else if (account.setup_status === 'failed') {
-                        setupBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Failed</span>';
-                    } else {
-                        setupBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">Not started</span>';
-                    }
-
-                    // Proxy display
-                    let proxyHtml = '';
-                    if (account.proxy && account.proxy.host) {
-                        proxyHtml = `
-                            <div class="text-sm">
-                                <span class="font-mono text-gray-700">${account.proxy.host}:${account.proxy.port}</span>
-                                <br>
-                                <span class="text-xs text-gray-500">${account.proxy.type ? account.proxy.type.toUpperCase() : 'N/A'}</span>
-                            </div>
-                        `;
-                    } else {
-                        proxyHtml = `
-                            <div class="flex items-center">
-                                <span class="text-sm text-red-600 font-medium mr-2">Нет прокси</span>
-                                <button onclick="assignManualProxy(${account.id})" 
-                                    class="text-blue-500 hover:text-blue-700 p-1 rounded hover:bg-blue-50 transition"
-                                    title="Назначить прокси">
-                                    🔗
-                                </button>
-                            </div>
-                        `;
-                    }
-
-                    row.innerHTML = `
-                        <td class="px-6 py-4 whitespace-nowrap">${profileHtml}</td>
-                        <td class="px-6 py-4 whitespace-nowrap">${statusBadge}</td>
-                        <td class="px-6 py-4 whitespace-nowrap">${setupBadge}</td>
-                        <td class="px-6 py-4 whitespace-nowrap">${proxyHtml}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm">
-                            <button onclick="openAccountDetails(${account.id})" 
-                                class="text-gray-600 hover:text-gray-800 font-medium mr-3"
-                                title="Подробнее">
-                                👁️
-                            </button>
-                            <button onclick="checkAccountStatus(${account.id})" 
-                                class="text-blue-600 hover:text-blue-800 font-medium mr-3"
-                                title="Проверить статус">
-                                🔍
-                            </button>
-                            <button onclick="runSetup(${account.id})" 
-                                class="text-green-600 hover:text-green-800 font-medium mr-3"
-                                title="Запустить Setup"
-                                ${account.setup_status === 'completed' ? 'disabled class="text-gray-400 cursor-not-allowed"' : ''}>
-                                ⚙️
-                            </button>
-                            <button onclick="deleteAccount(${account.id})" 
-                                class="text-red-600 hover:text-red-800 font-medium"
-                                title="Удалить">
-                                🗑️
-                            </button>
-                        </td>
+                // Proxy display
+                let proxyHtml = '';
+                if (account.proxy && account.proxy.host) {
+                    proxyHtml = `
+                        <div class="text-sm">
+                            <span class="font-mono text-gray-700">${account.proxy.host}:${account.proxy.port}</span>
+                            <br>
+                            <span class="text-xs text-gray-500">${account.proxy.type ? account.proxy.type.toUpperCase() : 'N/A'}</span>
+                        </div>
                     `;
+                } else {
+                    proxyHtml = `
+                        <div class="flex items-center">
+                            <span class="text-sm text-red-600 font-medium mr-2">Нет прокси</span>
+                            <button onclick="assignManualProxy(${account.id})" 
+                                class="text-blue-500 hover:text-blue-700 p-1 rounded hover:bg-blue-50 transition"
+                                title="Назначить прокси"
+                                ${isDisabled ? 'disabled' : ''}>
+                                🔗
+                            </button>
+                        </div>
+                    `;
+                }
 
-                    tbody.appendChild(row);
-                });
-            }
+                // Date display - show date_updated or a fallback
+                let dateDisplay = 'N/A';
+                if (account.date_updated) {
+                    // Format date as DD.MM HH:mm
+                    const date = new Date(account.date_updated);
+                    const day = String(date.getDate()).padStart(2, '0');
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const hours = String(date.getHours()).padStart(2, '0');
+                    const minutes = String(date.getMinutes()).padStart(2, '0');
+                    dateDisplay = `${day}.${month} ${hours}:${minutes}`;
+                }
 
-            // Update stats - use accounts array
-            const totalAccounts = accounts.length;
-            const activeAccounts = accounts.filter(a => a.status === 'active').length;
-            const setupCompleted = accounts.filter(a => a.setup_status === 'completed').length;
-            const withProxy = accounts.filter(a => a.proxy && a.proxy.host).length;
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap">${profileHtml}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">${roleHtml}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center">${warmupHtml}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">${statusBadge}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">${setupBadge}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">${templateHtml}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">${proxyHtml}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${dateDisplay}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <button onclick="openAccountDetails(${account.id})" 
+                            class="text-gray-600 hover:text-gray-800 font-medium mr-3"
+                            title="Подробнее">
+                            👁️
+                        </button>
+                        <button onclick="checkAccountStatus(${account.id})" 
+                            class="text-blue-600 hover:text-blue-800 font-medium mr-3"
+                            title="Проверить статус">
+                            🔍
+                        </button>
+                        <button onclick="runSetup(${account.id})" 
+                            class="text-green-600 hover:text-green-800 font-medium mr-3"
+                            title="Запустить Setup"
+                            ${account.setup_status === 'completed' ? 'disabled class="text-gray-400 cursor-not-allowed"' : ''}>
+                            ⚙️
+                        </button>
+                        <button onclick="deleteAccount(${account.id})" 
+                            class="text-red-600 hover:text-red-800 font-medium"
+                            title="Удалить">
+                            🗑️
+                        </button>
+                    </td>
+                `;
 
-            document.getElementById('total-accounts').textContent = totalAccounts;
-            document.getElementById('active-accounts').textContent = activeAccounts;
-            document.getElementById('setup-completed').textContent = setupCompleted;
-            document.getElementById('with-proxy').textContent = withProxy;
-
-        } catch (error) {
-            console.error('Error loading accounts:', error);
-            showToast(`Ошибка загрузки аккаунтов: ${error.message}`, 'error');
+                tbody.appendChild(row);
+            });
         }
+
+        // Update stats - use accounts array
+        const totalAccounts = accounts.length;
+        const activeAccounts = accounts.filter(a => a.status === 'active').length;
+        const setupCompleted = accounts.filter(a => a.setup_status === 'completed').length;
+        const withProxy = accounts.filter(a => a.proxy && a.proxy.host).length;
+        const bannedAccounts = accounts.filter(a => a.status === 'banned').length;
+        const reserveAccounts = accounts.filter(a => a.status === 'reserve' || a.status === 'reserved').length;
+
+        document.getElementById('total-accounts').textContent = totalAccounts;
+        document.getElementById('active-accounts').textContent = activeAccounts;
+        document.getElementById('setup-completed').textContent = setupCompleted;
+        document.getElementById('with-proxy').textContent = withProxy;
+        document.getElementById('banned-accounts').textContent = bannedAccounts;
+        document.getElementById('reserve-accounts').textContent = reserveAccounts;
+
+    } catch (error) {
+        console.error('Error loading accounts:', error);
+        showToast(`Ошибка загрузки аккаунтов: ${error.message}`, 'error');
     }
+}
+
+// New function to update account role
+async function updateAccountRole(accountId, workMode) {
+    try {
+        const response = await fetch(`/api/accounts/${accountId}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                work_mode: workMode
+            })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            showToast('Роль обновлена', 'success');
+            await loadAccounts(); // Refresh the table
+        } else {
+            showToast(`Ошибка: ${data.detail || data.message}`, 'error');
+        }
+    } catch (error) {
+        showToast(`Ошибка: ${error.message}`, 'error');
+    }
+}
+
+// New function to toggle warmup mode
+async function toggleWarmupMode(accountId, currentMode) {
+    try {
+        const newMode = !currentMode;
+        const response = await fetch(`/api/accounts/${accountId}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                warmup_mode: newMode
+            })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            showToast(`Режим прогрева ${newMode ? 'включен' : 'выключен'}`, 'success');
+            await loadAccounts(); // Refresh the table
+        } else {
+            showToast(`Ошибка: ${data.detail || data.message}`, 'error');
+        }
+    } catch (error) {
+        showToast(`Ошибка: ${error.message}`, 'error');
+    }
+}
 
     // Check account status
     async function checkAccountStatus(accountId) {
@@ -592,28 +761,7 @@
 
     // Run setup
     async function runSetup(accountId) {
-        if (!confirm('Запустить автоматическую настройку аккаунта?')) {
-            return;
-        }
-
-        showToast('Запуск setup...', 'info');
-
-        try {
-            const response = await fetch(`/api/accounts/${accountId}/run-setup`, {
-                method: 'POST'
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                showToast('Setup запущен! Проверьте статус через несколько минут', 'success');
-                await loadAccounts();
-            } else {
-                showToast(`Ошибка: ${data.detail || data.message}`, 'error');
-            }
-        } catch (error) {
-            showToast(`Ошибка: ${error.message}`, 'error');
-        }
+        openSetupAccountModal(accountId);
     }
 
     // Account Details Modal Functions
@@ -630,6 +778,8 @@
         const displayName = account.first_name ? `${account.first_name} ${account.last_name || ''}`.trim() : (account.phone || 'Unknown');
         document.getElementById('modal-name').textContent = displayName;
         document.getElementById('modal-phone').textContent = account.phone || '-';
+
+        // Show bio or a default message
         document.getElementById('modal-bio').textContent = account.bio || 'Нет описания';
 
         // Modal Badges
@@ -640,9 +790,23 @@
         else if (account.status === 'reserve' || account.status === 'reserved') statusBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Reserved</span>';
         else statusBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">Unknown</span>';
 
-        let workModeBadge = account.work_mode ? `<span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-50 text-blue-600 border border-blue-200">${account.work_mode}</span>` : '';
+        // Work mode badge
+        let workModeBadge = '';
+        if (account.work_mode) {
+            let modeLabel = account.work_mode;
+            if (modeLabel === 'commenter') modeLabel = 'Commenter';
+            else if (modeLabel === 'listener') modeLabel = 'Listener';
+            else if (modeLabel === 'reserve') modeLabel = 'Reserve';
+            workModeBadge = `<span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-50 text-blue-600 border border-blue-200">${modeLabel}</span>`;
+        }
 
-        badgesContainer.innerHTML = statusBadge + workModeBadge;
+        // Warmup mode badge
+        let warmupBadge = '';
+        if (account.warmup_mode === true) {
+            warmupBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-orange-50 text-orange-600 border border-orange-200">Прогрев 🔥</span>';
+        }
+
+        badgesContainer.innerHTML = statusBadge + workModeBadge + warmupBadge;
 
         // Setup Info
         const setupContainer = document.getElementById('modal-setup');
@@ -651,6 +815,14 @@
             setupContainer.innerHTML = `<span class="text-green-600 font-medium">Completed</span>${link}`;
         } else {
             setupContainer.innerHTML = `<span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">${account.setup_status || 'Pending'}</span>`;
+        }
+
+        // Template Info
+        const templateContainer = document.getElementById('modal-template');
+        if (account.setup_template_id && account.setup_template_id.name) {
+            templateContainer.innerHTML = `<span class="text-gray-700">${account.setup_template_id.name}</span>`;
+        } else {
+            templateContainer.innerHTML = `<span class="text-gray-400">Не выбран</span>`;
         }
 
         // Proxy Info
@@ -718,6 +890,131 @@
             }
         } catch (error) {
             showToast(`Ошибка: ${error.message}`, 'error');
+        }
+    }
+
+    // Global variables for setup modal
+    let currentAccountId = null;
+    let currentAccountPhone = null;
+
+    // Load templates for select dropdown
+    async function loadTemplatesForSelect() {
+        try {
+            const response = await fetch('/api/templates/list');
+            const data = await response.json();
+            
+            const templates = data.templates || [];
+            const selectElement = document.getElementById('setup-template-select');
+            
+            // Clear existing options
+            selectElement.innerHTML = '';
+            
+            if (templates.length === 0) {
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = 'Нет доступных шаблонов';
+                selectElement.appendChild(option);
+            } else {
+                // Add default option
+                const defaultOption = document.createElement('option');
+                defaultOption.value = '';
+                defaultOption.textContent = 'Выберите шаблон';
+                selectElement.appendChild(defaultOption);
+                
+                // Add template options
+                templates.forEach(template => {
+                    const option = document.createElement('option');
+                    option.value = template.id;
+                    option.textContent = template.name;
+                    selectElement.appendChild(option);
+                });
+            }
+        } catch (error) {
+            console.error('Error loading templates:', error);
+            showToast('Ошибка загрузки шаблонов', 'error');
+        }
+    }
+
+    // Open setup account modal
+    async function openSetupAccountModal(accountId) {
+        const account = currentAccountsData.find(a => a.id === accountId);
+        if (!account) {
+            showToast('Аккаунт не найден', 'error');
+            return;
+        }
+        
+        currentAccountId = accountId;
+        currentAccountPhone = account.phone || 'Неизвестный номер';
+        
+        // Set phone in modal
+        document.getElementById('setup-account-phone').textContent = currentAccountPhone;
+        
+        // Load templates
+        await loadTemplatesForSelect();
+        
+        // Show modal
+        const modal = document.getElementById('setupAccountModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+
+    // Close setup account modal
+    function closeSetupAccountModal() {
+        const modal = document.getElementById('setupAccountModal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        currentAccountId = null;
+        currentAccountPhone = null;
+    }
+
+    // Start account setup process
+    async function startAccountSetup() {
+        if (!currentAccountId) {
+            showToast('Аккаунт не выбран', 'error');
+            return;
+        }
+        
+        const templateSelect = document.getElementById('setup-template-select');
+        const templateId = templateSelect.value;
+        
+        if (!templateId) {
+            showToast('Выберите шаблон', 'error');
+            return;
+        }
+        
+        // Disable button during request
+        const startBtn = document.getElementById('start-setup-btn');
+        const originalText = startBtn.textContent;
+        startBtn.disabled = true;
+        startBtn.textContent = 'Запуск...';
+        
+        try {
+            const response = await fetch(`/api/accounts/${currentAccountId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    setup_template_id: parseInt(templateId),
+                    setup_status: 'pending'
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                showToast('Setup запущен', 'success');
+                closeSetupAccountModal();
+                await loadAccounts();
+            } else {
+                showToast(`Ошибка: ${data.detail || data.message}`, 'error');
+            }
+        } catch (error) {
+            showToast(`Ошибка: ${error.message}`, 'error');
+        } finally {
+            // Re-enable button
+            startBtn.disabled = false;
+            startBtn.textContent = originalText;
         }
     }
 </script>

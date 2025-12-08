@@ -170,6 +170,48 @@
       OPENAI_API_KEY: "${OPENAI_API_KEY}"
     command: python -u backend/workers/commenting_worker.py
 
+  setup-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    container_name: neurocomment-setup-worker
+    restart: unless-stopped
+    volumes:
+      - ./backend:/app/backend
+      - ./.env:/app/.env
+    networks:
+      - neurocomment-network
+    depends_on:
+      directus:
+        condition: service_started
+    environment:
+      PYTHONUNBUFFERED: "1"
+      DIRECTUS_PUBLIC_URL: "http://directus:8055"
+    command: python -m backend.workers.setup_worker
+
+  beszel:
+    image: henrygd/beszel:latest
+    container_name: neurocomment-beszel
+    restart: unless-stopped
+    ports:
+      - "8090:8090"
+    volumes:
+      - beszel_data:/beszel_data
+    networks:
+      - neurocomment-network
+
+  beszel-agent:
+    image: henrygd/beszel-agent:latest
+    container_name: neurocomment-beszel-agent
+    restart: unless-stopped
+    networks:             
+      - neurocomment-network
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      PORT: 45876
+      KEY: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAJ4JBPVLf7NhXcLmWZIPQd9jJf534Dy+fNQ8DK2HOr3"
+
 networks:
   neurocomment-network:
     driver: bridge
@@ -179,3 +221,4 @@ volumes:
   redis_data:
   directus_uploads:
   directus_extensions:
+  beszel_data:

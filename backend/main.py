@@ -16,7 +16,7 @@ from datetime import datetime, timedelta
 from account_manager import AccountManager
 from database import init_database, migrate_from_json, get_setting, set_setting
 from subscriber import add_channels_to_queue, process_subscription_queue, get_subscription_stats
-from backend.routers import dashboard, proxies, accounts
+from backend.routers import dashboard, proxies, accounts, templates
 from backend.directus_client import DirectusClient
 from database import init_database, migrate_from_json, get_setting, set_setting
 from subscriber import add_channels_to_queue, process_subscription_queue, get_subscription_stats
@@ -118,6 +118,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 app.include_router(dashboard.router)
 app.include_router(proxies.router)
 app.include_router(accounts.router)
+app.include_router(templates.router)
 
 
 # CORS middleware для доступа к Dashboard API
