@@ -1,12 +1,12 @@
-<div class="max-w-7xl">
+<div class="max-w-7xl" data-testid="page-templates">
     <div class="flex justify-between items-center mb-8">
         <h1 class="text-3xl font-bold text-gray-800">Шаблоны Настройки</h1>
         <div class="flex gap-2">
-            <button onclick="loadTemplates()"
+            <button id="refresh-templates-btn"
                 class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg font-medium transition flex items-center">
                 🔄 Обновить
             </button>
-            <button onclick="openCreateTemplateModal()"
+            <button id="create-template-btn"
                 class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition">
                 ➕ Создать шаблон
             </button>
@@ -14,7 +14,8 @@
     </div>
 
     <!-- Templates List -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="templates-container">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="templates-container"
+        data-testid="templates-list">
         <!-- Templates will be loaded here -->
     </div>
 </div>
@@ -32,7 +33,7 @@
     <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div class="flex justify-between items-center p-6 border-b">
             <h2 class="text-2xl font-bold text-gray-800" id="modal-title">Создать шаблон</h2>
-            <button onclick="closeTemplateModal()" class="text-gray-500 hover:text-gray-700">
+            <button id="close-modal-btn" class="text-gray-500 hover:text-gray-700">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
@@ -50,68 +51,155 @@
                     class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
             </div>
 
-            <!-- Personal Info Section -->
-            <div class="border border-gray-200 rounded-lg p-4">
-                <h3 class="font-medium text-gray-800 mb-3">👤 Личные данные</h3>
-                <div class="space-y-4">
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Имя</label>
-                            <input type="text" id="template-first-name"
-                                class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+            <!-- Tabs -->
+            <div class="border-b border-gray-200">
+                <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+                    <button id="profile-tab" type="button" role="tab" aria-selected="true"
+                        class="border-blue-500 text-blue-600 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+                        👤 Профиль
+                    </button>
+                    <button id="comment-tab" type="button" role="tab" aria-selected="false"
+                        class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+                        💬 Комменты
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Profile Tab Panel -->
+            <div id="profile-panel" role="tabpanel" class="space-y-6">
+                <!-- Personal Info Section -->
+                <div class="border border-gray-200 rounded-lg p-4">
+                    <h3 class="font-medium text-gray-800 mb-3">👤 Личные данные</h3>
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Имя</label>
+                                <input type="text" id="template-first-name"
+                                    class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Фамилия</label>
+                                <input type="text" id="template-last-name"
+                                    class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                            </div>
                         </div>
+
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Фамилия</label>
-                            <input type="text" id="template-last-name"
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Био</label>
+                            <textarea id="template-bio" rows="3"
+                                class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"></textarea>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Аватар (URL или ID
+                                файла)</label>
+                            <input type="text" id="template-avatar"
                                 class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
                         </div>
                     </div>
+                </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Био</label>
-                        <textarea id="template-bio" rows="3"
-                            class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"></textarea>
-                    </div>
+                <!-- Channel Settings Section -->
+                <div class="border border-gray-200 rounded-lg p-4">
+                    <h3 class="font-medium text-gray-800 mb-3">📢 Настройки канала</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Название канала</label>
+                            <input type="text" id="template-channel-title"
+                                class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                        </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Аватар (URL или ID файла)</label>
-                        <input type="text" id="template-avatar"
-                            class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Описание канала</label>
+                            <textarea id="template-channel-description" rows="2"
+                                class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"></textarea>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Шаблон текста для поста</label>
+                            <textarea id="template-post-text-template" rows="3"
+                                class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                placeholder="Шаблон текста для поста в канале"></textarea>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Channel Settings Section -->
-            <div class="border border-gray-200 rounded-lg p-4">
-                <h3 class="font-medium text-gray-800 mb-3">📢 Настройки канала</h3>
-                <div class="space-y-4">
+            <!-- Comment Policy Tab Panel -->
+            <div id="comment-panel" role="tabpanel" class="space-y-6 hidden">
+                <!-- AI Settings Section -->
+                <div class="border border-gray-200 rounded-lg p-4">
+                    <h3 class="font-medium text-gray-800 mb-3">🤖 AI Персона (Комментарии)</h3>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Название канала</label>
-                        <input type="text" id="template-channel-title"
-                            class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Описание канала</label>
-                        <textarea id="template-channel-description" rows="2"
-                            class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"></textarea>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Промпт поста</label>
-                        <textarea id="template-post-text-template" rows="3"
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            System Prompt
+                            <span class="text-xs text-gray-500 font-normal ml-1">(Оставьте пустым для использования
+                                глобального
+                                промпта)</span>
+                        </label>
+                        <textarea id="template-commenting-prompt" rows="4"
                             class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                            placeholder="Шаблон текста для поста в канале"></textarea>
+                            placeholder="Ты — опытный крипто-энтузиаст, который..."></textarea>
+                    </div>
+                </div>
+
+                <!-- Commenting Behavior Section -->
+                <div class="border border-gray-200 rounded-lg p-4">
+                    <h3 class="font-medium text-gray-800 mb-3">🛠 Поведение Комментирования</h3>
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Стиль общения</label>
+                                <input type="text" id="template-style" placeholder="Напр: Дерзкий, Официальный"
+                                    class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Тональность</label>
+                                <input type="text" id="template-tone" placeholder="Напр: Позитивная, Скептичная"
+                                    class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Макс. слов</label>
+                                <input type="number" id="template-max-words" placeholder="50" min="1" max="1000"
+                                    class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Мин. длина поста</label>
+                                <input type="number" id="template-min-post-length" placeholder="0" min="0" max="10000"
+                                    class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Режим фильтрации</label>
+                            <select id="template-filter-mode"
+                                class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                                <option value="none">Нет фильтрации (комментить всё)</option>
+                                <option value="keywords">По ключевым словам (Keywords)</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Ключевые слова
+                                <span class="text-xs text-gray-500 font-normal ml-1">(Через запятую)</span>
+                            </label>
+                            <textarea id="template-filter-keywords" rows="2" placeholder="крипта, биткоин, инвестиции"
+                                class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"></textarea>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <div class="flex justify-end gap-3 pt-4">
-                <button type="button" onclick="closeTemplateModal()"
+                <button type="button" id="cancel-template-btn"
                     class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-lg font-medium transition">
                     Отмена
                 </button>
-                <button type="button" onclick="submitForm()"
+                <button type="button" id="submit-template-btn"
                     class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition">
                     Сохранить
                 </button>
@@ -120,347 +208,30 @@
     </div>
 </div>
 
-<script>
-    // Global variables
-    let currentTemplateId = null;
+<script type="module">
+    // Import and initialize modules
+    import { initTemplatesPage, loadTemplates, cleanupTemplatesPage } from '/static/js/pages/templates.page.js';
+    import { initTemplateModal } from '/static/js/pages/template.modal.js';
 
-    // Initialize page
-    document.addEventListener('DOMContentLoaded', function () {
-        console.log('Page loaded, calling loadTemplates()');
-        loadTemplates();
+    // Make loadTemplates globally available for refresh button
+    window.loadTemplates = loadTemplates;
+
+    // Boot function to initialize the page
+    function boot() {
+        console.log('Templates page loaded, initializing...');
+        initTemplatesPage();
+        initTemplateModal();
+    }
+
+    // Initialize page immediately if DOM is already loaded, otherwise wait for DOMContentLoaded
+    if (document.readyState !== 'loading') {
+        boot();
+    } else {
+        document.addEventListener('DOMContentLoaded', boot);
+    }
+
+    // Cleanup when navigating away (if needed)
+    window.addEventListener('beforeunload', function () {
+        cleanupTemplatesPage();
     });
-
-    // Load templates from API
-    async function loadTemplates() {
-        console.log('loadTemplates() called at:', new Date().toISOString());
-        try {
-            console.log('Loading templates from API with anti-cache parameter');
-            const response = await fetch('/api/templates/list?_t=' + new Date().getTime());
-            console.log('Templates response received:', response);
-            
-            if (!response.ok) {
-                let errorMessage = 'Failed to load templates';
-                try {
-                    const errorText = await response.text();
-                    console.log('Error response text:', errorText);
-                    try {
-                        const errorData = JSON.parse(errorText);
-                        errorMessage = errorData.detail || errorText || errorMessage;
-                    } catch (parseError) {
-                        errorMessage = errorText || errorMessage;
-                    }
-                } catch (textError) {
-                    console.log('Could not read error response:', textError);
-                }
-                throw new Error(errorMessage);
-            }
-            
-            const data = await response.json();
-            console.log('Templates data received:', data);
-            renderTemplates(data.templates);
-        } catch (error) {
-            console.error('Error in loadTemplates():', error);
-            showToast('Ошибка загрузки шаблонов: ' + error.message, '❌', 'error');
-        }
-    }
-
-    // Render templates in the grid
-    function renderTemplates(templates) {
-        const container = document.getElementById('templates-container');
-        
-        if (templates.length === 0) {
-            container.innerHTML = `
-                <div class="col-span-full text-center py-12">
-                    <p class="text-gray-500">Нет созданных шаблонов</p>
-                    <button onclick="openCreateTemplateModal()" 
-                        class="mt-4 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition">
-                        Создать первый шаблон
-                    </button>
-                </div>
-            `;
-            return;
-        }
-        
-        container.innerHTML = templates.map(template => `
-            <div class="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200 hover:shadow-lg transition">
-                <div class="p-5">
-                    <div class="flex justify-between items-start">
-                        <h3 class="text-lg font-bold text-gray-800">${escapeHtml(template.name)}</h3>
-                        <div class="flex gap-2">
-                            <button onclick="editTemplate(${template.id})" 
-                                class="text-blue-500 hover:text-blue-700">
-                                ✏️
-                            </button>
-                            <button onclick="deleteTemplate(${template.id})" 
-                                class="text-red-500 hover:text-red-700">
-                                🗑️
-                            </button>
-                        </div>
-                    </div>
-                    
-                    ${template.channel_title ? `
-                        <div class="mt-3">
-                            <p class="text-sm text-gray-600">Канал: ${escapeHtml(template.channel_title)}</p>
-                        </div>
-                    ` : ''}
-                    
-                    ${template.first_name || template.last_name ? `
-                        <div class="mt-2">
-                            <p class="text-sm text-gray-600">
-                                ${escapeHtml(template.first_name || '')} ${escapeHtml(template.last_name || '')}
-                            </p>
-                        </div>
-                    ` : ''}
-                    
-                    ${template.bio ? `
-                        <div class="mt-3">
-                            <p class="text-sm text-gray-600 line-clamp-2">${escapeHtml(template.bio)}</p>
-                        </div>
-                    ` : ''}
-                </div>
-            </div>
-        `).join('');
-    }
-
-    // Open create template modal
-    function openCreateTemplateModal() {
-        currentTemplateId = null;
-        document.getElementById('modal-title').textContent = 'Создать шаблон';
-        document.getElementById('template-form').reset();
-        document.getElementById('template-id').value = '';
-        document.getElementById('templateModal').classList.remove('hidden');
-        document.getElementById('templateModal').classList.add('flex');
-    }
-
-    // Edit template
-    async function editTemplate(id) {
-        try {
-            console.log(`Loading template with ID: ${id}`);
-            const response = await fetch('/api/templates/list');
-            console.log('Templates list response:', response);
-            
-            if (!response.ok) {
-                let errorMessage = 'Failed to load templates';
-                try {
-                    const errorText = await response.text();
-                    console.log('Error response text:', errorText);
-                    try {
-                        const errorData = JSON.parse(errorText);
-                        errorMessage = errorData.detail || errorText || errorMessage;
-                    } catch (parseError) {
-                        errorMessage = errorText || errorMessage;
-                    }
-                } catch (textError) {
-                    console.log('Could not read error response:', textError);
-                }
-                throw new Error(errorMessage);
-            }
-            
-            const data = await response.json();
-            console.log('Templates data:', data);
-            const template = data.templates.find(t => t.id === id);
-            
-            if (!template) {
-                throw new Error('Template not found');
-            }
-            
-            // Fill form with template data
-            currentTemplateId = template.id;
-            document.getElementById('modal-title').textContent = 'Редактировать шаблон';
-            document.getElementById('template-id').value = template.id;
-            document.getElementById('template-name').value = template.name || '';
-            document.getElementById('template-first-name').value = template.first_name || '';
-            document.getElementById('template-last-name').value = template.last_name || '';
-            document.getElementById('template-bio').value = template.bio || '';
-            document.getElementById('template-avatar').value = template.avatar || '';
-            document.getElementById('template-channel-title').value = template.channel_title || '';
-            document.getElementById('template-channel-description').value = template.channel_description || '';
-            document.getElementById('template-post-text-template').value = template.post_text_template || '';
-            
-            // Show modal
-            document.getElementById('templateModal').classList.remove('hidden');
-            document.getElementById('templateModal').classList.add('flex');
-        } catch (error) {
-            console.error('Error loading template:', error);
-            showToast('Ошибка загрузки шаблона: ' + error.message, '❌', 'error');
-        }
-    }
-
-    // Close template modal
-    function closeTemplateModal() {
-        document.getElementById('templateModal').classList.add('hidden');
-        document.getElementById('templateModal').classList.remove('flex');
-    }
-
-    // Handle form submission
-    async function submitForm() {
-        
-        try {
-            console.log('Form submission started');
-            
-            const formData = {
-                name: document.getElementById('template-name').value.trim(),
-                first_name: document.getElementById('template-first-name').value.trim() || null,
-                last_name: document.getElementById('template-last-name').value.trim() || null,
-                bio: document.getElementById('template-bio').value.trim() || null,
-                avatar: document.getElementById('template-avatar').value.trim() || null,
-                channel_title: document.getElementById('template-channel-title').value.trim() || null,
-                channel_description: document.getElementById('template-channel-description').value.trim() || null,
-                post_text_template: document.getElementById('template-post-text-template').value.trim() || null
-            };
-            
-            console.log('Form data collected:', formData);
-            
-            // Validate required fields
-            if (!formData.name) {
-                console.log('Validation failed: name is required');
-                showToast('Название шаблона обязательно', '⚠️', 'warning');
-                return;
-            }
-            
-            console.log('Current template ID:', currentTemplateId);
-            
-            let response;
-            if (currentTemplateId) {
-                // Update existing template
-                console.log(`Making PATCH request to /api/templates/${currentTemplateId}`);
-                response = await fetch(`/api/templates/${currentTemplateId}`, {
-                    method: 'PATCH',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(formData)
-                });
-            } else {
-                // Create new template
-                console.log('Making POST request to /api/templates/create');
-                response = await fetch('/api/templates/create', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(formData)
-                });
-            }
-            
-            console.log('Response received:', response);
-            
-            if (!response.ok) {
-                console.log('Response not ok, status:', response.status);
-                let errorMessage = 'Failed to save template';
-                try {
-                    const errorText = await response.text();
-                    console.log('Error response text:', errorText);
-                    try {
-                        const errorData = JSON.parse(errorText);
-                        errorMessage = errorData.detail || errorText || errorMessage;
-                    } catch (parseError) {
-                        errorMessage = errorText || errorMessage;
-                    }
-                } catch (textError) {
-                    console.log('Could not read error response:', textError);
-                }
-                throw new Error(errorMessage);
-            }
-            
-            // Success
-            console.log('Template saved successfully');
-            closeTemplateModal();
-            loadTemplates();
-            showToast(currentTemplateId ? 'Шаблон обновлен' : 'Шаблон создан', '✅', 'success');
-            
-        } catch (error) {
-            console.error('Error saving template:', error);
-            showToast(`Ошибка: ${error.message}`, '❌', 'error');
-        }
-    }
-
-    // Delete template
-    async function deleteTemplate(id) {
-        if (!confirm('Вы уверены, что хотите удалить этот шаблон?')) {
-            return;
-        }
-        
-        try {
-            console.log(`Making DELETE request to /api/templates/${id}`);
-            const response = await fetch(`/api/templates/${id}`, {
-                method: 'DELETE'
-            });
-            
-            console.log('Delete response received:', response);
-            
-            if (!response.ok) {
-                console.log('Delete response not ok, status:', response.status);
-                let errorMessage = 'Failed to delete template';
-                try {
-                    const errorText = await response.text();
-                    console.log('Delete error response text:', errorText);
-                    try {
-                        const errorData = JSON.parse(errorText);
-                        errorMessage = errorData.detail || errorText || errorMessage;
-                    } catch (parseError) {
-                        errorMessage = errorText || errorMessage;
-                    }
-                } catch (textError) {
-                    console.log('Could not read delete error response:', textError);
-                }
-                throw new Error(errorMessage);
-            }
-            
-            // Success
-            console.log('Template deleted successfully');
-            loadTemplates();
-            showToast('Шаблон удален', '🗑️', 'success');
-            
-        } catch (error) {
-            console.error('Error deleting template:', error);
-            showToast(`Ошибка: ${error.message}`, '❌', 'error');
-        }
-    }
-
-    // Show toast notification
-    function showToast(message, icon, type) {
-        const toast = document.getElementById('toast');
-        const toastIcon = document.getElementById('toast-icon');
-        const toastMessage = document.getElementById('toast-message');
-        
-        toastIcon.textContent = icon;
-        toastMessage.textContent = message;
-        
-        // Set color based on type
-        toast.className = 'fixed top-4 right-4 bg-white shadow-lg rounded-lg p-4 transition-all z-50 max-w-sm';
-        if (type === 'error') {
-            toast.classList.add('border-l-4', 'border-l-red-500');
-        } else if (type === 'success') {
-            toast.classList.add('border-l-4', 'border-l-green-500');
-        } else if (type === 'warning') {
-            toast.classList.add('border-l-4', 'border-l-yellow-500');
-        }
-        
-        toast.classList.remove('hidden');
-        toast.classList.add('flex');
-        
-        // Hide after 3 seconds
-        setTimeout(() => {
-            toast.classList.add('hidden');
-            toast.classList.remove('flex');
-        }, 3000);
-    }
-
-    // Escape HTML to prevent XSS
-    function escapeHtml(text) {
-        if (!text) return '';
-        const map = {
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#039;'
-        };
-        return text.toString().replace(/[&<>"']/g, m => map[m]);
-    }
-    
-    // Call loadTemplates directly to ensure it runs
-    console.log('Calling loadTemplates() directly');
-    loadTemplates();
 </script>

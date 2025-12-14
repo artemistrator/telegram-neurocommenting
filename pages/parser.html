@@ -1,6 +1,6 @@
-<div class="max-w-6xl">
+<div class="max-w-6xl mx-auto" data-testid="page-parser">
     <div class="flex justify-between items-center mb-8">
-        <h1 class="text-3xl font-bold text-gray-800">Парсинг Telegram каналов</h1>
+        <h1 class="text-3xl font-bold text-gray-800">Поиск Telegram каналов</h1>
     </div>
 
     <!-- Search Form -->
@@ -12,206 +12,106 @@
             <textarea id="keywords" rows="4"
                 class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="python&#10;javascript&#10;фриланс"></textarea>
+            <p class="text-xs text-gray-500 mt-1">Каждое ключевое слово будет обработано отдельно.</p>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Минимум подписчиков</label>
-                <input type="number" id="min_members" value="0" min="0"
-                    class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Результатов на ключевое слово</label>
-                <input type="number" id="max_results" value="10" min="1" max="50"
+                <input type="number" id="min_subscribers" value="100" min="0"
                     class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
             </div>
             <div class="flex items-end">
-                <label class="flex items-center">
-                    <input type="checkbox" id="only_with_comments"
-                        class="h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500">
-                    <span class="ml-2 text-sm text-gray-900">Только с комментариями</span>
-                </label>
+                <button id="search-btn" data-testid="parser-search-btn"
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md font-medium transition flex justify-center items-center">
+                    <span class="btn-text">Начать поиск</span>
+                    <svg class="loading hidden animate-spin ml-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg"
+                        fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+                        </circle>
+                        <path class="opacity-75" fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                        </path>
+                    </svg>
+                </button>
             </div>
         </div>
-
-        <button id="search-btn"
-            class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md font-medium transition">
-            <span class="btn-text">Найти каналы</span>
-            <span class="loading hidden">Поиск...</span>
-        </button>
     </div>
 
     <!-- Results Table -->
-    <div id="results-container" class="bg-white rounded-lg shadow-md p-6 hidden">
+    <div class="bg-white rounded-lg shadow-md p-6">
         <div class="flex justify-between items-center mb-4">
-            <h2 class="text-xl font-semibold text-gray-700">Результаты поиска (<span id="results-count">0</span>)</h2>
-            <button id="add-selected-btn"
-                class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md font-medium transition">
-                Добавить выбранные в мониторинг
-            </button>
+            <h2 class="text-xl font-semibold text-gray-700 flex items-center">
+                Результаты поиска
+                <span id="results-count"
+                    class="ml-2 bg-gray-100 text-gray-600 text-sm font-medium px-2.5 py-0.5 rounded-full">0</span>
+            </h2>
+            <div class="flex space-x-2">
+                <button id="refresh-btn"
+                    class="text-gray-600 hover:text-gray-800 p-2 rounded-md transition border border-gray-300 hover:bg-gray-50 bg-white"
+                    title="Обновить результаты">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                        </path>
+                    </svg>
+                </button>
+                <button id="add-selected-btn" disabled
+                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md font-medium transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center">
+                    <span class="mr-1">➕</span> Добавить выбранные в мониторинг
+                </button>
+            </div>
         </div>
 
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto relative min-h-[200px]">
+            <!-- Loading Overlay -->
+            <div id="table-loading"
+                class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10 hidden">
+                <svg class="animate-spin h-8 w-8 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none"
+                    viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                    </path>
+                </svg>
+            </div>
+
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10">
                             <input type="checkbox" id="select-all"
-                                class="h-5 w-5 text-blue-600 rounded border-gray-300">
+                                class="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer">
                         </th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Название</th>
+                            Название
+                        </th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Username</th>
+                            Подписчики
+                        </th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Подписчики</th>
+                            Приоритет
+                        </th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Комментарии</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Ключевое слово</th>
+                            Посты (с коммент.)
+                        </th>
                     </tr>
                 </thead>
                 <tbody id="results-table" class="bg-white divide-y divide-gray-200">
                     <!-- Results will be inserted here -->
                 </tbody>
             </table>
+
+            <div id="no-results" class="hidden text-center py-10 text-gray-500">
+                Результатов пока нет. Запустите поиск или обновите таблицу.
+            </div>
         </div>
     </div>
 </div>
 
-<script>
-    const searchBtn = document.getElementById('search-btn');
-    const addSelectedBtn = document.getElementById('add-selected-btn');
-    const resultsContainer = document.getElementById('results-container');
-    const resultsTable = document.getElementById('results-table');
-    const resultsCount = document.getElementById('results-count');
-    const selectAllCheckbox = document.getElementById('select-all');
-
-    let searchResults = [];
-
-    // Search channels
-    searchBtn.addEventListener('click', async () => {
-        const keywordsText = document.getElementById('keywords').value.trim();
-        if (!keywordsText) {
-            alert('Введите хотя бы одно ключевое слово');
-            return;
-        }
-
-        const keywords = keywordsText.split('\n').map(k => k.trim()).filter(k => k);
-        const minMembers = parseInt(document.getElementById('min_members').value) || 0;
-        const maxResults = parseInt(document.getElementById('max_results').value) || 10;
-        const onlyWithComments = document.getElementById('only_with_comments').checked;
-
-        // Show loading state
-        searchBtn.disabled = true;
-        searchBtn.querySelector('.btn-text').classList.add('hidden');
-        searchBtn.querySelector('.loading').classList.remove('hidden');
-
-        try {
-            const response = await fetch('/api/parser/search', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    keywords,
-                    min_members: minMembers,
-                    only_with_comments: onlyWithComments,
-                    max_results_per_keyword: maxResults
-                })
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                searchResults = data.channels;
-                displayResults(searchResults);
-            } else {
-                alert(`Ошибка: ${data.detail || 'Неизвестная ошибка'}`);
-            }
-        } catch (error) {
-            alert(`Ошибка: ${error.message}`);
-        } finally {
-            // Hide loading state
-            searchBtn.disabled = false;
-            searchBtn.querySelector('.btn-text').classList.remove('hidden');
-            searchBtn.querySelector('.loading').classList.add('hidden');
-        }
-    });
-
-    // Display results
-    function displayResults(channels) {
-        resultsTable.innerHTML = '';
-        resultsCount.textContent = channels.length;
-
-        if (channels.length === 0) {
-            resultsTable.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">Каналы не найдены</td></tr>';
-            resultsContainer.classList.remove('hidden');
-            return;
-        }
-
-        channels.forEach((channel, index) => {
-            const row = document.createElement('tr');
-            row.className = 'hover:bg-gray-50';
-            row.innerHTML = `
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <input type="checkbox" class="channel-checkbox h-5 w-5 text-blue-600 rounded border-gray-300" data-index="${index}">
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">${channel.title || 'Без названия'}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-gray-500">
-                    ${channel.username ? `@${channel.username}` : '-'}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-gray-500">${channel.members_count.toLocaleString()}</td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${channel.has_comments ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">
-                        ${channel.has_comments ? 'Да' : 'Нет'}
-                    </span>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${channel.keyword}</td>
-            `;
-            resultsTable.appendChild(row);
-        });
-
-        resultsContainer.classList.remove('hidden');
-    }
-
-    // Select all checkbox
-    selectAllCheckbox.addEventListener('change', (e) => {
-        const checkboxes = document.querySelectorAll('.channel-checkbox');
-        checkboxes.forEach(cb => cb.checked = e.target.checked);
-    });
-
-    // Add selected channels to monitoring
-    addSelectedBtn.addEventListener('click', async () => {
-        const selectedCheckboxes = document.querySelectorAll('.channel-checkbox:checked');
-
-        if (selectedCheckboxes.length === 0) {
-            alert('Выберите хотя бы один канал');
-            return;
-        }
-
-        const selectedChannels = Array.from(selectedCheckboxes).map(cb => {
-            const index = parseInt(cb.dataset.index);
-            return searchResults[index];
-        });
-
-        try {
-            const response = await fetch('/api/parser/save-channels', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ channels: selectedChannels })
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                alert(`Успешно добавлено ${data.added} каналов. Всего в мониторинге: ${data.total}`);
-                // Uncheck all
-                selectedCheckboxes.forEach(cb => cb.checked = false);
-                selectAllCheckbox.checked = false;
-            } else {
-                alert(`Ошибка: ${data.detail || 'Неизвестная ошибка'}`);
-            }
-        } catch (error) {
-            alert(`Ошибка: ${error.message}`);
-        }
-    });
-</script>
+<!-- Toast Notification -->
+<div id="toast"
+    class="fixed bottom-5 right-5 bg-gray-800 text-white px-6 py-3 rounded-lg shadow-lg transform translate-y-20 opacity-0 transition-all duration-300 z-50">
+    <span id="toast-message">Notification</span>
+</div>

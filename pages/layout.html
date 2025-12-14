@@ -1,0 +1,59 @@
+                const html = await response.text();
+                document.getElementById('content').innerHTML = html;
+
+                // Update active menu item
+                document.querySelectorAll('.menu-item').forEach(item => {
+                    item.classList.remove('active');
+                });
+                const activeItem = document.querySelector(`[data-page="${page}"]`);
+                if (activeItem) {
+                    activeItem.classList.add('active');
+                }
+
+                // Update URL
+                history.pushState({ page }, '', `/${page}`);
+
+                // Close mobile menu if open
+                closeMobileMenu();
+
+                // Execute page-specific scripts if any
+                executePageScripts();
+                
+                // Initialize page-specific JavaScript for SPA
+                // For templates page, we set cleanup function but don't manually init (uses modular boot)
+                if (page === 'templates') {
+                    // Set cleanup function for templates page
+                    setTimeout(() => {
+                        if (typeof window.cleanupTemplatesPage === 'function') {
+                            window.currentCleanupFunction = window.cleanupTemplatesPage;
+                        }
+                    }, 100);
+                }
+                // For parser page, manually call init function
+                else if (page === 'parser' && typeof window.initParserPage === 'function') {
+                    window.initParserPage();
+                    // Set cleanup function if it exists
+                    if (typeof window.cleanupParserPage === 'function') {
+                        window.currentCleanupFunction = window.cleanupParserPage;
+                    }
+                }
+                // For channels page, manually call init function
+                else if (page === 'channels' && typeof window.initChannelsPage === 'function') {
+                    window.initChannelsPage();
+                    // Set cleanup function if it exists
+                    if (typeof window.cleanupChannelsPage === 'function') {
+                        window.currentCleanupFunction = window.cleanupChannelsPage;
+                    }
+                }
+                // For other pages that might have init functions
+                else if (typeof window[`init${page.charAt(0).toUpperCase() + page.slice(1)}Page`] === 'function') {
+                    window[`init${page.charAt(0).toUpperCase() + page.slice(1)}Page`]();
+                    // Set cleanup function if it exists
+                    if (typeof window[`cleanup${page.charAt(0).toUpperCase() + page.slice(1)}Page`] === 'function') {
+                        window.currentCleanupFunction = window[`cleanup${page.charAt(0).toUpperCase() + page.slice(1)}Page`];
+                    }
+                }
+                // For pages with generic init/cleanup functions
+                else if (typeof window.cleanup === 'function') {
+                    window.currentCleanupFunction = window.cleanup;
+                }

@@ -90,14 +90,14 @@ async def get_available_commenter_account() -> Optional[Dict]:
     Критерии:
     - work_mode='commenter'
     - status='active'
-    - commenting_profile_id не null
+    - template_id не null
     """
     try:
         params = {
             "filter[status][_eq]": "active",
             "filter[work_mode][_eq]": "commenter",
-            "filter[commenting_profile_id][_nnull]": "true",
-            "fields": "id,phone,commenting_profile_id.*",
+            "filter[template_id][_nnull]": "true",
+            "fields": "id,phone,template_id.*",
             "limit": 1
         }
         
@@ -153,6 +153,9 @@ def check_keyword_filter(post_text: str, filter_keywords: str) -> bool:
     return False
 
 
+DEFAULT_SYSTEM_PROMPT = "You are a helpful commenter."
+
+
 async def generate_comment(post_text: str, profile: Dict) -> Optional[str]:
     """
     Сгенерировать комментарий через OpenAI GPT-4o-mini.
@@ -165,15 +168,21 @@ async def generate_comment(post_text: str, profile: Dict) -> Optional[str]:
         Сгенерированный комментарий или None при ошибке
     """
     try:
-        system_prompt = profile.get('system_prompt', 'You are a helpful commenter.')
-        max_words = profile.get('max_words', 50)
+        # Cascade logic for system prompt
+        # 1. Per-account/template 'commenting_prompt' if exists
+        # 2. Global fallback (constant for now)
+        system_prompt = profile.get('commenting_prompt')
+        if not system_prompt:
+            system_prompt = DEFAULT_SYSTEM_PROMPT
+            
+        max_words = profile.get('max_words') or 50
         
         user_prompt = f"""Post:
 {post_text}
 
 Generate a relevant comment (max {max_words} words)."""
         
-        logger.info(f"[Parser] Генерация комментария через GPT-4o-mini...")
+        logger.info(f"[Parser] Генерация комментария через GPT-4o-mini (System prompt len: {len(system_prompt)})...")
         
         response = await openai_client.chat.completions.create(
             model="gpt-4o-mini",
@@ -213,10 +222,10 @@ async def process_post(post: Dict, account: Dict) -> bool:
     
     logger.info(f"[Parser] Пост #{post_id} проверка фильтров")
     
-    # Получить профиль
-    profile = account.get('commenting_profile_id')
+    # Получить профиль (теперь это template_id)
+    profile = account.get('template_id')
     if not profile or not isinstance(profile, dict):
-        logger.warning(f"[Parser] Пост #{post_id} - нет профиля у аккаунта, скип")
+        logger.warning(f"[Parser] Пост #{post_id} - нет шаблона (template_id) у аккаунта, скип")
         return False
     
     # Проверить фильтр keywords

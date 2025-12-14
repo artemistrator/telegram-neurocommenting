@@ -1,0 +1,11 @@
+{
+    "name": "pyparser-e2e",
+    "version": "1.0.0",
+    "description": "E2E smoke tests for PyParser SPA",
+    "scripts": {
+        "test:e2e": "playwright test"
+    },
+    "devDependencies": {
+        "@playwright/test": "^1.40.0"
+    }
+}

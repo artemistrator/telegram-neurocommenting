@@ -1,4 +1,4 @@
-<div class="max-w-7xl">
+<div class="max-w-7xl" data-testid="page-accounts">
     <div class="flex justify-between items-center mb-8">
         <h1 class="text-3xl font-bold text-gray-800">Управление Аккаунтами</h1>
         <button onclick="openImportModal()"
@@ -38,7 +38,7 @@
     <!-- Accounts Table -->
     <div class="bg-white rounded-lg shadow-md overflow-hidden">
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
+            <table class="min-w-full divide-y divide-gray-200" data-testid="accounts-table">
                 <thead class="bg-gray-50">
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -267,7 +267,7 @@
                 <label class="block text-sm font-medium text-gray-700 mb-2">Номер телефона</label>
                 <p id="setup-account-phone" class="text-lg font-medium text-gray-900"></p>
             </div>
-            
+
             <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-2">Выберите шаблон</label>
                 <select id="setup-template-select" class="w-full p-2 border border-gray-300 rounded-md">
@@ -503,17 +503,17 @@
                     </td>
                 </tr>
             `;
-        } else {
-            accounts.forEach(account => {
-                const row = document.createElement('tr');
-                row.className = 'hover:bg-gray-50';
-                row.setAttribute('data-account-id', account.id);
+            } else {
+                accounts.forEach(account => {
+                    const row = document.createElement('tr');
+                    row.className = 'hover:bg-gray-50';
+                    row.setAttribute('data-account-id', account.id);
 
-                // Profile display (avatar + phone + name)
-                const avatarUrl = account.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(account.phone || 'User');
-                const displayName = account.first_name ? `${account.first_name} ${account.last_name || ''}`.trim() : '';
+                    // Profile display (avatar + phone + name)
+                    const avatarUrl = account.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(account.phone || 'User');
+                    const displayName = account.first_name ? `${account.first_name} ${account.last_name || ''}`.trim() : '';
 
-                const profileHtml = `
+                    const profileHtml = `
                     <div class="flex items-center">
                         <img src="${avatarUrl}" alt="Avatar" class="w-10 h-10 rounded-full mr-3" onerror="this.src='https://ui-avatars.com/api/?name=User'">
                         <div>
@@ -523,10 +523,10 @@
                     </div>
                 `;
 
-                // Role dropdown - Updated with proper options
-                const isDisabled = account.status === 'banned';
-                const disabledAttr = isDisabled ? 'disabled' : '';
-                const roleHtml = `
+                    // Role dropdown - Updated with proper options
+                    const isDisabled = account.status === 'banned';
+                    const disabledAttr = isDisabled ? 'disabled' : '';
+                    const roleHtml = `
                     <select 
                         onchange="updateAccountRole(${account.id}, this.value)" 
                         class="rounded border-gray-300 text-sm focus:ring-blue-500 focus:border-blue-500 ${isDisabled ? 'bg-gray-100 cursor-not-allowed' : ''}"
@@ -538,9 +538,9 @@
                     </select>
                 `;
 
-                // Warmup toggle - Fire icon
-                const warmupActive = account.warmup_mode === true;
-                const warmupHtml = `
+                    // Warmup toggle - Fire icon
+                    const warmupActive = account.warmup_mode === true;
+                    const warmupHtml = `
                     <button 
                         onclick="toggleWarmupMode(${account.id}, ${warmupActive})"
                         class="focus:outline-none ${isDisabled ? 'cursor-not-allowed opacity-50' : ''}"
@@ -551,56 +551,56 @@
                     </button>
                 `;
 
-                // Status badge
-                let statusBadge = '';
-                if (account.status === 'active') {
-                    statusBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Active</span>';
-                } else if (account.status === 'banned') {
-                    statusBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Banned</span>';
-                } else if (account.status === 'reserve' || account.status === 'reserved') {
-                    statusBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Reserved</span>';
-                } else {
-                    statusBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">Unknown</span>';
-                }
+                    // Status badge
+                    let statusBadge = '';
+                    if (account.status === 'active') {
+                        statusBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Active</span>';
+                    } else if (account.status === 'banned') {
+                        statusBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Banned</span>';
+                    } else if (account.status === 'reserve' || account.status === 'reserved') {
+                        statusBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Reserved</span>';
+                    } else {
+                        statusBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">Unknown</span>';
+                    }
 
-                // Setup status badge with channel link
-                let setupBadge = '';
-                if (account.setup_status === 'completed') {
-                    const channelLink = account.personal_channel_url || '#';
-                    setupBadge = `
+                    // Setup status badge with channel link
+                    let setupBadge = '';
+                    if (account.setup_status === 'completed') {
+                        const channelLink = account.personal_channel_url || '#';
+                        setupBadge = `
                         <div>
                             <span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">Done</span>
                             ${account.personal_channel_url ? `<br><a href="${channelLink}" target="_blank" class="text-xs text-blue-600 hover:underline mt-1 inline-block">📢 Канал</a>` : ''}
                         </div>
                     `;
-                } else if (account.setup_status === 'pending') {
-                    setupBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Pending</span>';
-                } else if (account.setup_status === 'failed') {
-                    setupBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Failed</span>';
-                } else {
-                    setupBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">Not started</span>';
-                }
+                    } else if (account.setup_status === 'pending') {
+                        setupBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Pending</span>';
+                    } else if (account.setup_status === 'failed') {
+                        setupBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Failed</span>';
+                    } else {
+                        setupBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">Not started</span>';
+                    }
 
-                // Template display
-                let templateHtml = '';
-                if (account.setup_template_id && account.setup_template_id.name) {
-                    templateHtml = `<span class="text-sm text-gray-700">${account.setup_template_id.name}</span>`;
-                } else {
-                    templateHtml = `<span class="text-sm text-gray-400">Не выбран</span>`;
-                }
+                    // Template display
+                    let templateHtml = '';
+                    if (account.setup_template_id && account.setup_template_id.name) {
+                        templateHtml = `<span class="text-sm text-gray-700">${account.setup_template_id.name}</span>`;
+                    } else {
+                        templateHtml = `<span class="text-sm text-gray-400">Не выбран</span>`;
+                    }
 
-                // Proxy display
-                let proxyHtml = '';
-                if (account.proxy && account.proxy.host) {
-                    proxyHtml = `
+                    // Proxy display
+                    let proxyHtml = '';
+                    if (account.proxy && account.proxy.host) {
+                        proxyHtml = `
                         <div class="text-sm">
                             <span class="font-mono text-gray-700">${account.proxy.host}:${account.proxy.port}</span>
                             <br>
                             <span class="text-xs text-gray-500">${account.proxy.type ? account.proxy.type.toUpperCase() : 'N/A'}</span>
                         </div>
                     `;
-                } else {
-                    proxyHtml = `
+                    } else {
+                        proxyHtml = `
                         <div class="flex items-center">
                             <span class="text-sm text-red-600 font-medium mr-2">Нет прокси</span>
                             <button onclick="assignManualProxy(${account.id})" 
@@ -611,21 +611,21 @@
                             </button>
                         </div>
                     `;
-                }
+                    }
 
-                // Date display - show date_updated or a fallback
-                let dateDisplay = 'N/A';
-                if (account.date_updated) {
-                    // Format date as DD.MM HH:mm
-                    const date = new Date(account.date_updated);
-                    const day = String(date.getDate()).padStart(2, '0');
-                    const month = String(date.getMonth() + 1).padStart(2, '0');
-                    const hours = String(date.getHours()).padStart(2, '0');
-                    const minutes = String(date.getMinutes()).padStart(2, '0');
-                    dateDisplay = `${day}.${month} ${hours}:${minutes}`;
-                }
+                    // Date display - show date_updated or a fallback
+                    let dateDisplay = 'N/A';
+                    if (account.date_updated) {
+                        // Format date as DD.MM HH:mm
+                        const date = new Date(account.date_updated);
+                        const day = String(date.getDate()).padStart(2, '0');
+                        const month = String(date.getMonth() + 1).padStart(2, '0');
+                        const hours = String(date.getHours()).padStart(2, '0');
+                        const minutes = String(date.getMinutes()).padStart(2, '0');
+                        dateDisplay = `${day}.${month} ${hours}:${minutes}`;
+                    }
 
-                row.innerHTML = `
+                    row.innerHTML = `
                     <td class="px-6 py-4 whitespace-nowrap">${profileHtml}</td>
                     <td class="px-6 py-4 whitespace-nowrap">${roleHtml}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-center">${warmupHtml}</td>
@@ -659,83 +659,83 @@
                     </td>
                 `;
 
-                tbody.appendChild(row);
+                    tbody.appendChild(row);
+                });
+            }
+
+            // Update stats - use accounts array
+            const totalAccounts = accounts.length;
+            const activeAccounts = accounts.filter(a => a.status === 'active').length;
+            const setupCompleted = accounts.filter(a => a.setup_status === 'completed').length;
+            const withProxy = accounts.filter(a => a.proxy && a.proxy.host).length;
+            const bannedAccounts = accounts.filter(a => a.status === 'banned').length;
+            const reserveAccounts = accounts.filter(a => a.status === 'reserve' || a.status === 'reserved').length;
+
+            document.getElementById('total-accounts').textContent = totalAccounts;
+            document.getElementById('active-accounts').textContent = activeAccounts;
+            document.getElementById('setup-completed').textContent = setupCompleted;
+            document.getElementById('with-proxy').textContent = withProxy;
+            document.getElementById('banned-accounts').textContent = bannedAccounts;
+            document.getElementById('reserve-accounts').textContent = reserveAccounts;
+
+        } catch (error) {
+            console.error('Error loading accounts:', error);
+            showToast(`Ошибка загрузки аккаунтов: ${error.message}`, 'error');
+        }
+    }
+
+    // New function to update account role
+    async function updateAccountRole(accountId, workMode) {
+        try {
+            const response = await fetch(`/api/accounts/${accountId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    work_mode: workMode
+                })
             });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                showToast('Роль обновлена', 'success');
+                await loadAccounts(); // Refresh the table
+            } else {
+                showToast(`Ошибка: ${data.detail || data.message}`, 'error');
+            }
+        } catch (error) {
+            showToast(`Ошибка: ${error.message}`, 'error');
         }
-
-        // Update stats - use accounts array
-        const totalAccounts = accounts.length;
-        const activeAccounts = accounts.filter(a => a.status === 'active').length;
-        const setupCompleted = accounts.filter(a => a.setup_status === 'completed').length;
-        const withProxy = accounts.filter(a => a.proxy && a.proxy.host).length;
-        const bannedAccounts = accounts.filter(a => a.status === 'banned').length;
-        const reserveAccounts = accounts.filter(a => a.status === 'reserve' || a.status === 'reserved').length;
-
-        document.getElementById('total-accounts').textContent = totalAccounts;
-        document.getElementById('active-accounts').textContent = activeAccounts;
-        document.getElementById('setup-completed').textContent = setupCompleted;
-        document.getElementById('with-proxy').textContent = withProxy;
-        document.getElementById('banned-accounts').textContent = bannedAccounts;
-        document.getElementById('reserve-accounts').textContent = reserveAccounts;
-
-    } catch (error) {
-        console.error('Error loading accounts:', error);
-        showToast(`Ошибка загрузки аккаунтов: ${error.message}`, 'error');
     }
-}
 
-// New function to update account role
-async function updateAccountRole(accountId, workMode) {
-    try {
-        const response = await fetch(`/api/accounts/${accountId}`, {
-            method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                work_mode: workMode
-            })
-        });
+    // New function to toggle warmup mode
+    async function toggleWarmupMode(accountId, currentMode) {
+        try {
+            const newMode = !currentMode;
+            const response = await fetch(`/api/accounts/${accountId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    warmup_mode: newMode
+                })
+            });
 
-        const data = await response.json();
+            const data = await response.json();
 
-        if (response.ok) {
-            showToast('Роль обновлена', 'success');
-            await loadAccounts(); // Refresh the table
-        } else {
-            showToast(`Ошибка: ${data.detail || data.message}`, 'error');
+            if (response.ok) {
+                showToast(`Режим прогрева ${newMode ? 'включен' : 'выключен'}`, 'success');
+                await loadAccounts(); // Refresh the table
+            } else {
+                showToast(`Ошибка: ${data.detail || data.message}`, 'error');
+            }
+        } catch (error) {
+            showToast(`Ошибка: ${error.message}`, 'error');
         }
-    } catch (error) {
-        showToast(`Ошибка: ${error.message}`, 'error');
     }
-}
-
-// New function to toggle warmup mode
-async function toggleWarmupMode(accountId, currentMode) {
-    try {
-        const newMode = !currentMode;
-        const response = await fetch(`/api/accounts/${accountId}`, {
-            method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                warmup_mode: newMode
-            })
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-            showToast(`Режим прогрева ${newMode ? 'включен' : 'выключен'}`, 'success');
-            await loadAccounts(); // Refresh the table
-        } else {
-            showToast(`Ошибка: ${data.detail || data.message}`, 'error');
-        }
-    } catch (error) {
-        showToast(`Ошибка: ${error.message}`, 'error');
-    }
-}
 
     // Check account status
     async function checkAccountStatus(accountId) {
@@ -902,13 +902,13 @@ async function toggleWarmupMode(accountId, currentMode) {
         try {
             const response = await fetch('/api/templates/list');
             const data = await response.json();
-            
+
             const templates = data.templates || [];
             const selectElement = document.getElementById('setup-template-select');
-            
+
             // Clear existing options
             selectElement.innerHTML = '';
-            
+
             if (templates.length === 0) {
                 const option = document.createElement('option');
                 option.value = '';
@@ -920,7 +920,7 @@ async function toggleWarmupMode(accountId, currentMode) {
                 defaultOption.value = '';
                 defaultOption.textContent = 'Выберите шаблон';
                 selectElement.appendChild(defaultOption);
-                
+
                 // Add template options
                 templates.forEach(template => {
                     const option = document.createElement('option');
@@ -942,16 +942,16 @@ async function toggleWarmupMode(accountId, currentMode) {
             showToast('Аккаунт не найден', 'error');
             return;
         }
-        
+
         currentAccountId = accountId;
         currentAccountPhone = account.phone || 'Неизвестный номер';
-        
+
         // Set phone in modal
         document.getElementById('setup-account-phone').textContent = currentAccountPhone;
-        
+
         // Load templates
         await loadTemplatesForSelect();
-        
+
         // Show modal
         const modal = document.getElementById('setupAccountModal');
         modal.classList.remove('hidden');
@@ -973,21 +973,21 @@ async function toggleWarmupMode(accountId, currentMode) {
             showToast('Аккаунт не выбран', 'error');
             return;
         }
-        
+
         const templateSelect = document.getElementById('setup-template-select');
         const templateId = templateSelect.value;
-        
+
         if (!templateId) {
             showToast('Выберите шаблон', 'error');
             return;
         }
-        
+
         // Disable button during request
         const startBtn = document.getElementById('start-setup-btn');
         const originalText = startBtn.textContent;
         startBtn.disabled = true;
         startBtn.textContent = 'Запуск...';
-        
+
         try {
             const response = await fetch(`/api/accounts/${currentAccountId}`, {
                 method: 'PATCH',
@@ -999,9 +999,9 @@ async function toggleWarmupMode(accountId, currentMode) {
                     setup_status: 'pending'
                 })
             });
-            
+
             const data = await response.json();
-            
+
             if (response.ok) {
                 showToast('Setup запущен', 'success');
                 closeSetupAccountModal();

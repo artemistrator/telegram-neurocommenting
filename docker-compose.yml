@@ -43,7 +43,7 @@
     container_name: neurocomment-directus
     restart: unless-stopped
     ports:
-      - "8055:8055"
+      - "18055:8055"
     volumes:
       - directus_uploads:/directus/uploads
       - directus_extensions:/directus/extensions
@@ -67,10 +67,9 @@
       DB_PASSWORD: "Fh6YtNNmR76"
 
       CACHE_ENABLED: "false"
-
       WEBSOCKETS_ENABLED: "true"
 
-      PUBLIC_URL: "http://localhost:8055"
+      PUBLIC_URL: "http://localhost:18055"
 
   backend:
     build:
@@ -79,7 +78,7 @@
     container_name: neurocomment-backend
     restart: unless-stopped
     ports:
-      - "8888:8000"
+      - "18888:8000"
     volumes:
       - .:/app
     networks:
@@ -194,7 +193,7 @@
     container_name: neurocomment-beszel
     restart: unless-stopped
     ports:
-      - "8090:8090"
+      - "18090:8090"
     volumes:
       - beszel_data:/beszel_data
     networks:
@@ -204,7 +203,7 @@
     image: henrygd/beszel-agent:latest
     container_name: neurocomment-beszel-agent
     restart: unless-stopped
-    networks:             
+    networks:
       - neurocomment-network
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro

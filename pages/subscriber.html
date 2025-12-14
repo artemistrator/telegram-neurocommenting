@@ -260,7 +260,7 @@
 </head>
 
 <body>
-    <div class="container">
+    <div class="container" data-testid="page-autosubscribe">
         <div class="header">
             <h1>🚀 Автоподписка</h1>
             <p>Автоматическая подписка на каналы с умным распределением нагрузки</p>
@@ -320,7 +320,7 @@
                 <textarea id="channelList" rows="8"
                     placeholder="https://t.me/channel1&#10;@channel2&#10;channel3"></textarea>
             </div>
-            <button class="btn btn-primary" onclick="addChannels()">
+            <button class="btn btn-primary" onclick="addChannels()" data-testid="autosubscribe-start-btn">
                 <span id="addBtnText">Запустить автоподписку</span>
                 <span id="addBtnLoading" class="loading hidden"></span>
             </button>

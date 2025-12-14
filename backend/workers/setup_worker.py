@@ -70,7 +70,7 @@ async def get_pending_account() -> Optional[Dict]:
         params = {
             "filter[status][_eq]": "active",
             "filter[setup_status][_eq]": "pending",
-            "fields": "id,phone,session_string,api_id,api_hash,user_created,setup_template_id",
+            "fields": "id,phone,session_string,api_id,api_hash,user_created,template_id",
             "limit": 1
         }
         
@@ -450,7 +450,7 @@ async def setup_account_cycle():
         phone = account['phone']
         
         # 2. Получить шаблон по setup_template_id
-        template_id = account.get('setup_template_id')
+        template_id = account.get('template_id')
         
         if not template_id:
             logger.error(f"[Setup] Для аккаунта {phone} не выбран шаблон!")

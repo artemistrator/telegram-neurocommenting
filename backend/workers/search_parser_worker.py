@@ -14,6 +14,12 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+from telethon import TelegramClient
+from telethon.sessions import StringSession
+from telethon.tl.functions.contacts import SearchRequest
+from telethon.tl.types import Channel
+from telethon.errors import FloodWaitError
+
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
@@ -158,6 +164,37 @@ async def generate_mock_channels(keyword: str, count: int = None) -> List[Dict]:
     return channels
 
 
+async def get_search_account() -> Optional[Dict]:
+    """
+    Найти подходящий аккаунт для поиска.
+    Критерии: active, work_mode IN [listener, commenter].
+    Prefer listener (sort -work_mode).
+    
+    Returns:
+        Данные аккаунта или None
+    """
+    try:
+        params = {
+            "filter[status][_eq]": "active",
+            "filter[work_mode][_in]": "listener,commenter",
+            "sort": "-work_mode",
+            "limit": 1
+        }
+        
+        response = await directus.client.get("/items/accounts", params=params)
+        data = response.json().get('data', [])
+        
+        if data:
+            return data[0]
+        
+        logger.warning("[Search Parser] Не найдено активных аккаунтов для поиска")
+        return None
+        
+    except Exception as e:
+        logger.error(f"[Search Parser] Ошибка поиска аккаунта: {e}")
+        return None
+
+
 async def search_telegram_real(keyword: str, min_subscribers: int) -> List[Dict]:
     """
     Реальный поиск в Telegram через Telethon.
@@ -169,9 +206,83 @@ async def search_telegram_real(keyword: str, min_subscribers: int) -> List[Dict]
     Returns:
         Список найденных каналов
     """
-    # TODO: Реализовать когда будут доступны Telegram аккаунты
-    logger.warning("[Search Parser] Реальный поиск через Telethon ещё не реализован")
-    return []
+    account = await get_search_account()
+    if not account:
+        return []
+
+    logger.info(f"[Search Parser] Используем аккаунт {account.get('phone')} для поиска '{keyword}'")
+
+    try:
+        client = TelegramClient(
+            StringSession(account['session_string']),
+            int(account['api_id']),
+            account['api_hash']
+        )
+        
+        await client.connect()
+        
+        if not await client.is_user_authorized():
+            logger.error(f"[Search Parser] Аккаунт {account.get('phone')} не авторизован!")
+            await client.disconnect()
+            return []
+
+        found_channels = []
+        
+        try:
+            # Выполняем поиск
+            result = await client(SearchRequest(
+                q=keyword,
+                limit=SEARCH_MAX_RESULTS
+            ))
+            
+            # Обрабатываем результаты
+            # SearchRequest возвращает contacts.Found, который содержит lists: results, chats, users
+            for chat in result.chats:
+                try:
+                    # Нас интересуют только каналы (и супергруппы)
+                    if not isinstance(chat, Channel):
+                        continue
+                    
+                    # Пропускаем каналы без юзернейма (не можем сформировать ссылку)
+                    if not chat.username:
+                        continue
+                        
+                    # Получаем количество подписчиков (если доступно)
+                    subscribers_count = getattr(chat, 'participants_count', 0)
+                    if subscribers_count is None:
+                        subscribers_count = 0
+                        
+                    # Собираем данные
+                    channel_data = {
+                        'channel_title': chat.title,
+                        'channel_username': chat.username,
+                        'channel_url': f"https://t.me/{chat.username}",
+                        'subscribers_count': subscribers_count,
+                        'has_comments_enabled': True,  # Считаем True по умолчанию, как просили
+                        'last_post_id': None,  # Можно получить через GetHistoryRequest, но это доп. запрос
+                        'posts_with_comments': 0  # Placeholder
+                    }
+                    
+                    found_channels.append(channel_data)
+                    
+                except Exception as e:
+                    logger.error(f"[Search Parser] Ошибка парсинга чата {chat.id}: {e}")
+                    continue
+
+        except FloodWaitError as e:
+            logger.warning(f"[Search Parser] FloodWaitError: ждите {e.seconds} сек")
+            # Можно сделать sleep, но лучше скипнуть этот цикл
+        except Exception as e:
+            logger.error(f"[Search Parser] Ошибка запроса SearchRequest: {e}")
+            
+        finally:
+            await client.disconnect()
+            
+        return found_channels
+
+    except Exception as e:
+        logger.error(f"[Search Parser] Критическая ошибка Telethon: {e}")
+        return []
 
 
 async def search_telegram(keyword: str, min_subscribers: int) -> List[Dict]:

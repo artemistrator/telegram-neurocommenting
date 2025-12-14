@@ -83,47 +83,51 @@
         <!-- Menu -->
         <nav class="flex-1 p-4">
             <a href="#" class="menu-item flex items-center px-4 py-3 rounded-lg mb-2 text-white no-underline"
-                data-page="home">
+                data-page="home" data-testid="nav-home">
                 <span class="text-xl mr-3">🏠</span>
                 <span>Главная</span>
             </a>
             <a href="#" class="menu-item flex items-center px-4 py-3 rounded-lg mb-2 text-white no-underline"
-                data-page="accounts">
+                data-page="accounts" data-testid="nav-accounts">
                 <span class="text-xl mr-3">👤</span>
                 <span>Аккаунты</span>
             </a>
             <a href="#" class="menu-item flex items-center px-4 py-3 rounded-lg mb-2 text-white no-underline"
-                data-page="proxies">
+                data-page="proxies" data-testid="nav-proxies">
                 <span class="text-xl mr-3">🌐</span>
                 <span>Прокси</span>
             </a>
             <a href="#" class="menu-item flex items-center px-4 py-3 rounded-lg mb-2 text-white no-underline"
-                data-page="subscriber">
+                data-page="subscriber" data-testid="nav-autosubscribe">
                 <span class="text-xl mr-3">🚀</span>
                 <span>Автоподписка</span>
             </a>
             <a href="#" class="menu-item flex items-center px-4 py-3 rounded-lg mb-2 text-white no-underline"
-                data-page="parser">
+                data-page="parser" data-testid="nav-parser">
                 <span class="text-xl mr-3">🔍</span>
                 <span>Парсинг</span>
             </a>
             <a href="#" class="menu-item flex items-center px-4 py-3 rounded-lg mb-2 text-white no-underline"
-                data-page="dashboard">
+                data-page="dashboard" data-testid="nav-dashboard">
                 <span class="text-xl mr-3">📊</span>
                 <span>Дашборд</span>
             </a>
             <a href="#" class="menu-item flex items-center px-4 py-3 rounded-lg mb-2 text-white no-underline"
-                data-page="settings">
+                data-page="settings" data-testid="nav-settings">
                 <span class="text-xl mr-3">⚙️</span>
                 <span>Настройки</span>
             </a>
             <a href="#" class="menu-item flex items-center px-4 py-3 rounded-lg mb-2 text-white no-underline"
-                data-page="templates">
+                data-page="templates" data-testid="nav-templates">
                 <span class="text-xl mr-3">📋</span>
                 <span>Шаблоны</span>
             </a>
+            <a href="#" class="menu-item flex items-center px-4 py-3 rounded-lg mb-2 text-white no-underline"
+                data-page="channels" data-testid="nav-channels">
+                <span class="text-xl mr-3">📢</span>
+                <span>Каналы</span>
+            </a>
         </nav>
-
         <!-- Footer -->
         <div class="p-4 border-t border-gray-700">
             <p class="text-xs text-gray-500 text-center">v1.0.0 © 2025</p>
@@ -153,6 +157,25 @@
     <script>
         // Navigation functions
         async function loadPage(page) {
+            if (window.currentCleanupFunction) {
+                try {
+                    window.currentCleanupFunction();
+                } catch (e) {
+                    console.error('Error during page cleanup:', e);
+                }
+                window.currentCleanupFunction = null;
+            }
+
+            // Universal cleanup of all tracked timers
+            if (window.App && window.App.core && window.App.core.timers && window.App.core.timers.clearAll) {
+                window.App.core.timers.clearAll();
+            }
+
+            // Cleanup monitoring features (SSE, intervals)
+            if (window.App && window.App.features && window.App.features.monitoring && window.App.features.monitoring.cleanup) {
+                window.App.features.monitoring.cleanup();
+            }
+
             try {
                 const response = await fetch(`/pages/${page}`);
                 if (!response.ok) throw new Error('Page not found');
@@ -178,6 +201,45 @@
                 // Execute page-specific scripts if any
                 executePageScripts();
 
+                // Initialize page-specific JavaScript for SPA
+                // For templates page, we set cleanup function but don't manually init (uses modular boot)
+                if (page === 'templates') {
+                    // Set cleanup function for templates page
+                    setTimeout(() => {
+                        if (typeof window.cleanupTemplatesPage === 'function') {
+                            window.currentCleanupFunction = window.cleanupTemplatesPage;
+                        }
+                    }, 100);
+                }
+                // For parser page, manually call init function
+                else if (page === 'parser' && typeof window.initParserPage === 'function') {
+                    window.initParserPage();
+                    // Set cleanup function if it exists
+                    if (typeof window.cleanupParserPage === 'function') {
+                        window.currentCleanupFunction = window.cleanupParserPage;
+                    }
+                }
+                // For channels page, manually call init function
+                else if (page === 'channels' && typeof window.initChannelsPage === 'function') {
+                    window.initChannelsPage();
+                    // Set cleanup function if it exists
+                    if (typeof window.cleanupChannelsPage === 'function') {
+                        window.currentCleanupFunction = window.cleanupChannelsPage;
+                    }
+                }
+                // For other pages that might have init functions
+                else if (typeof window[`init${page.charAt(0).toUpperCase() + page.slice(1)}Page`] === 'function') {
+                    window[`init${page.charAt(0).toUpperCase() + page.slice(1)}Page`]();
+                    // Set cleanup function if it exists
+                    if (typeof window[`cleanup${page.charAt(0).toUpperCase() + page.slice(1)}Page`] === 'function') {
+                        window.currentCleanupFunction = window[`cleanup${page.charAt(0).toUpperCase() + page.slice(1)}Page`];
+                    }
+                }
+                // For pages with generic init/cleanup functions
+                else if (typeof window.cleanup === 'function') {
+                    window.currentCleanupFunction = window.cleanup;
+                }
+
             } catch (error) {
                 console.error('Error loading page:', error);
                 alert('Ошибка загрузки страницы: ' + error.message);
@@ -188,13 +250,55 @@
         function executePageScripts() {
             const scripts = document.getElementById('content').querySelectorAll('script');
             scripts.forEach(script => {
+                // Skip already executed scripts
+                if (script.dataset.executed === '1') {
+                    return;
+                }
+
                 const newScript = document.createElement('script');
+
+                // Copy attributes
+                if (script.type) {
+                    newScript.type = script.type;
+                }
                 if (script.src) {
                     newScript.src = script.src;
                 } else {
-                    newScript.textContent = script.textContent;
+                    try {
+                        newScript.textContent = script.textContent;
+                    } catch (e) {
+                        console.error('Page script error', e);
+                    }
                 }
+
+                // Copy additional attributes if they exist
+                if (script.async) newScript.async = script.async;
+                if (script.defer) newScript.defer = script.defer;
+                if (script.nomodule) newScript.nomodule = script.nomodule;
+                if (script.crossorigin) newScript.crossorigin = script.crossorigin;
+                if (script.integrity) newScript.integrity = script.integrity;
+                if (script.referrerPolicy) newScript.referrerPolicy = script.referrerPolicy;
+
+                // Mark original script as executed
+                script.dataset.executed = '1';
+
                 document.body.appendChild(newScript);
+
+                // If it's an inline script (no src), remove it immediately after execution
+                // to prevent accumulation of script tags in the DOM
+                if (!newScript.src) {
+                    document.body.removeChild(newScript);
+                    return;
+                }
+
+                // Clean up to prevent memory leaks
+                newScript.addEventListener('load', () => {
+                    document.body.removeChild(newScript);
+                });
+                newScript.addEventListener('error', (e) => {
+                    console.error('Script loading error:', e);
+                    document.body.removeChild(newScript);
+                });
             });
         }
 
@@ -236,6 +340,18 @@
             }
         });
     </script>
+    <script src="/static/js/app.core.js?v=999"></script>
+    <script src="/static/js/core/timers.js?v=999"></script>
+    <script src="/static/js/pages/channels.page.js?v=999"></script>
+    <script src="/static/js/features/monitoring.js?v=999"></script>
+    <script src="/static/js/features/telegramAuth.js?v=999"></script>
+    <script src="/static/js/pages/settings.page.js?v=999"></script>
+    <script src="/static/js/core/dom.js?v=999"></script>
+    <script src="/static/js/core/toast.js?v=999"></script>
+    <script src="/static/js/api/http.js?v=999"></script>
+    <script src="/static/js/pages/parser.page.js?v=999"></script>
+    <script src="/static/script.js?v=999"></script>
+
 </body>
 
 </html>

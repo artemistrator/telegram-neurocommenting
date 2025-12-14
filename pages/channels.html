@@ -1,0 +1,163 @@
+<div class="max-w-6xl mx-auto" data-testid="page-channels">
+    <div class="flex justify-between items-center mb-8">
+        <h1 class="text-3xl font-bold text-gray-800">Каналы в мониторинге</h1>
+    </div>
+
+    <!-- Channels Table -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-semibold text-gray-700">Список каналов</h2>
+            <div class="flex space-x-2">
+                <button id="refresh-channels-btn"
+                    class="text-gray-600 hover:text-gray-800 p-2 rounded-md transition border border-gray-300 hover:bg-gray-50 bg-white"
+                    title="Обновить список">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                        </path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto relative min-h-[200px]">
+            <!-- Loading Overlay -->
+            <div id="channels-loading"
+                class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10 hidden">
+                <svg class="animate-spin h-8 w-8 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none"
+                    viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                    </path>
+                </svg>
+            </div>
+
+            <table class="min-w-full divide-y divide-gray-200" data-testid="channels-table">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Название
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Подписчики
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Статус
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Режим работы
+                        </th>
+                    </tr>
+                </thead>
+                <tbody id="channels-table" class="bg-white divide-y divide-gray-200">
+                    <!-- Channels will be inserted here -->
+                </tbody>
+            </table>
+
+            <div id="no-channels" class="hidden text-center py-10 text-gray-500">
+                Нет каналов в мониторинге.
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Initialize Channels Page
+    async function initChannelsPage() {
+        console.log('✅ Channels Page Init START');
+
+        const refreshBtn = document.getElementById('refresh-channels-btn');
+        const channelsTable = document.getElementById('channels-table');
+        const noChannels = document.getElementById('no-channels');
+        const channelsLoading = document.getElementById('channels-loading');
+
+        async function loadChannels() {
+            if (channelsLoading) channelsLoading.classList.remove('hidden');
+
+            try {
+                const response = await fetch('/api/channels/list');
+                const data = await response.json();
+
+                if (response.ok) {
+                    renderChannels(data.channels || []);
+                } else {
+                    throw new Error(data.detail || 'Ошибка загрузки каналов');
+                }
+            } catch (error) {
+                console.error(error);
+                showToast('Не удалось загрузить список каналов', 'error');
+            } finally {
+                if (channelsLoading) channelsLoading.classList.add('hidden');
+            }
+        }
+
+        function renderChannels(channels) {
+            if (!channelsTable) return;
+            channelsTable.innerHTML = '';
+
+            if (noChannels) {
+                noChannels.classList.toggle('hidden', channels.length > 0);
+            }
+
+            if (channels.length === 0) {
+                return;
+            }
+
+            channels.forEach(channel => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50 transition-colors';
+
+                // Status formatting
+                let statusClass = 'bg-gray-100 text-gray-800';
+                if (channel.status === 'active') statusClass = 'bg-green-100 text-green-800';
+                else if (channel.status === 'error') statusClass = 'bg-red-100 text-red-800';
+
+                row.innerHTML = `
+                    <td class="px-6 py-4">
+                        <div class="flex items-center">
+                            <div class="ml-0">
+                                <div class="text-sm font-medium text-gray-900 line-clamp-1" title="${channel.channel_name || 'Без названия'}">
+                                    <a href="${channel.channel_url}" target="_blank" class="hover:text-blue-600 hover:underline">
+                                        ${channel.channel_name || 'Без названия'}
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        ${channel.subscriber_count ? channel.subscriber_count.toLocaleString() : '0'}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}">
+                            ${channel.status || 'unknown'}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        ${channel.work_mode || '-'}
+                    </td>
+                `;
+                channelsTable.appendChild(row);
+            });
+        }
+
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', () => {
+                const icon = refreshBtn.querySelector('svg');
+                if (icon) {
+                    icon.classList.add('animate-spin');
+                    setTimeout(() => icon.classList.remove('animate-spin'), 1000);
+                }
+                loadChannels();
+            });
+            console.log('✅ Added event listener to refreshBtn');
+        }
+
+        // Initial Load
+        loadChannels();
+        console.log('✅ Channels Page Init END');
+    }
+
+    // Add to global scope for router
+    window.initChannelsPage = initChannelsPage;
+</script>

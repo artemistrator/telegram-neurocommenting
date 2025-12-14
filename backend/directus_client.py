@@ -110,6 +110,20 @@ class DirectusClient:
             print(f"⚠️ Error finding available proxy: {e}")
             return None
 
+    async def get_item(self, collection, item_id):
+        """Get a single item from a collection by ID"""
+        if not self.token:
+            await self.login()
+        
+        try:
+            response = await self.client.get(f"/items/{collection}/{item_id}")
+            response.raise_for_status()
+            data = response.json()
+            return data.get('data')
+        except Exception as e:
+            print(f"Error getting item {item_id} from {collection}: {e}")
+            return None
+
 
 # Глобальный экземпляр
 directus = DirectusClient()

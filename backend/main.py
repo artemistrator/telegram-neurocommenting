@@ -16,7 +16,7 @@ from datetime import datetime, timedelta
 from account_manager import AccountManager
 from database import init_database, migrate_from_json, get_setting, set_setting
 from subscriber import add_channels_to_queue, process_subscription_queue, get_subscription_stats
-from backend.routers import dashboard, proxies, accounts, templates
+from backend.routers import dashboard, proxies, accounts, templates, parser_router
 from backend.directus_client import DirectusClient
 from database import init_database, migrate_from_json, get_setting, set_setting
 from subscriber import add_channels_to_queue, process_subscription_queue, get_subscription_stats
@@ -119,6 +119,7 @@ app.include_router(dashboard.router)
 app.include_router(proxies.router)
 app.include_router(accounts.router)
 app.include_router(templates.router)
+app.include_router(parser_router.router)
 
 
 # CORS middleware для доступа к Dashboard API
@@ -1197,6 +1198,97 @@ async def get_recent_comments(
 
 
 # ============================================
+# CHANNELS API
+# ============================================
+
+@app.get("/api/channels/list")
+async def list_channels():
+    """Get list of active channels from Directus"""
+    try:
+        # Ensure Directus is logged in
+        if not directus_client.token:
+            await directus_client.login()
+        
+        # Log the request details for debugging
+        url = f"{directus_client.base_url}/items/channels"
+        headers = {"Authorization": f"Bearer {directus_client.token[:10]}..."} if directus_client.token else {}
+        # Updated fields to request actual fields from channels and nested fields from found_channel_id relation
+        # Removed non-existent work_mode field, added source field
+        params = {
+            "fields": "id,status,source,found_channel_id.id,found_channel_id.channel_url,found_channel_id.channel_username,found_channel_id.channel_title,found_channel_id.subscribers_count,found_channel_id.status",
+            "sort": "-date_created"
+        }
+        
+        print(f"[Channels API] Requesting channels from Directus:")
+        print(f"  URL: {url}")
+        print(f"  Headers: {headers}")
+        print(f"  Params: {params}")
+        
+        # Get channels from Directus
+        response = await directus_client.client.get("/items/channels", params=params)
+        
+        print(f"[Channels API] Directus response status: {response.status_code}")
+        
+        if response.status_code == 403:
+            error_detail = response.text
+            print(f"[Channels API] Directus 403 error: {error_detail}")
+            raise HTTPException(status_code=500, detail="Directus forbidden: check role permissions for found_channels fields (channel_url/channel_title/channel_username/subscribers_count)")
+        
+        response.raise_for_status()
+        data = response.json()
+        
+        channels = data.get('data', [])
+        
+        # Map the response to the expected flat structure
+        mapped_channels = []
+        for item in channels:
+            # Get the found_channel relation data, or empty dict if null
+            fc = item.get("found_channel_id") or {}
+            
+            # Extract values with proper fallbacks
+            channel_url = fc.get("channel_url", "")
+            
+            # Determine channel_name based on priority
+            if fc.get("channel_title"):
+                channel_name = fc["channel_title"]
+            elif fc.get("channel_username"):
+                channel_name = "@" + fc["channel_username"]
+            else:
+                channel_name = "Unknown"
+                
+            subscriber_count = fc.get("subscribers_count") or 0
+            
+            # Status priority: item.status > found_channel.status > "unknown"
+            status = item.get("status") or fc.get("status") or "unknown"
+            
+            # Work mode from channels.source field (renamed for frontend)
+            work_mode = item.get("source") or "-"
+            
+            # Build the flat structure expected by frontend
+            mapped_channels.append({
+                "id": item.get("id"),
+                "channel_url": channel_url,
+                "channel_name": channel_name,
+                "subscriber_count": subscriber_count,
+                "status": status,
+                "work_mode": work_mode
+            })
+        
+        return {
+            'channels': mapped_channels,
+            'total': len(mapped_channels)
+        }
+        
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
+    except Exception as e:
+        print(f"[Channels API] Error listing channels: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to list channels: {str(e)}")
+
+# ============================================
 # END DASHBOARD API
 # ============================================
 
@@ -1204,7 +1296,6 @@ async def get_recent_comments(
 # ============================================
 # SPA ROUTING - Catch-all for page refreshes
 # ============================================
-
 @app.get("/{full_path:path}", response_class=HTMLResponse)
 async def catch_all(full_path: str):
     """Catch-all route for SPA routing - returns layout.html for all non-API/static paths"""
