@@ -1,6 +1,9 @@
 window.App = window.App || {};
 window.App.pages = window.App.pages || {};
 window.App.core = window.App.core || {};
+window.App.core.config = {
+    DIRECTUS_URL: "http://localhost:18055"
+};
 window.App.state = window.App.state || {}; // Initialize state
 window.App.api = window.App.api || {};
 
@@ -111,9 +114,22 @@ window.initChannelsPage = function () {
     }
 };
 
+
 window.cleanupChannelsPage = function () {
     if (window.App && window.App.pages && window.App.pages.channels && window.App.pages.channels.cleanup) {
         window.App.pages.channels.cleanup();
+    }
+};
+
+window.initAccountsPage = function () {
+    if (window.App && window.App.pages && window.App.pages.accounts && window.App.pages.accounts.init) {
+        window.App.pages.accounts.init();
+    }
+};
+
+window.cleanupAccountsPage = function () {
+    if (window.App && window.App.pages && window.App.pages.accounts && window.App.pages.accounts.cleanup) {
+        window.App.pages.accounts.cleanup();
     }
 };
 
@@ -132,6 +148,14 @@ async function init() {
         console.log('✅ Calling initChannelsPage()');
         if (typeof initChannelsPage === 'function') {
             initChannelsPage();
+        }
+        return;
+    }
+
+    if (window.location.pathname === '/accounts' || window.location.pathname.endsWith('/accounts')) {
+        console.log('✅ Calling initAccountsPage()');
+        if (typeof initAccountsPage === 'function') {
+            initAccountsPage();
         }
         return;
     }

@@ -25,14 +25,30 @@ async def check_account_health(account):
     if not session_string:
         return False, "No session_string found"
     
+    # Explicit guard: Check for missing proxy_id BEFORE attempting to create client
+    if not account.get('proxy_id'):
+        print(f"❌ Cannot create Telegram client for account {account_id}: No proxy assigned")
+        return False, "No proxy assigned to account"
+    
     client = None
     try:
-        # Create client from session string
-        client = TelegramClient(
-            StringSession(session_string),
-            account.get('api_id', 2040),
-            account.get('api_hash', 'b18441a1ff607e10a989891a5462e627')
-        )
+        # Create client via factory (with mandatory proxy)
+        try:
+            from backend.services.telegram_client_factory import get_client_for_account, format_proxy
+            
+            client = await get_client_for_account(account, directus)
+            
+            # Safe logging before connect (no credentials)
+            proxy = account.get('proxy_id')
+            if proxy:
+                print(f"[TG] connect account_id={account_id} phone={account.get('phone')} via {format_proxy(proxy)}")
+            else:
+                print(f"[TG] connect account_id={account_id} phone={account.get('phone')} - no proxy info")
+                
+        except (ValueError, RuntimeError) as e:
+            # Factory error: missing proxy, invalid proxy status, etc.
+            print(f"❌ Cannot create Telegram client for account {account_id}: {e}")
+            return False, f"Proxy error: {e}"
         
         await client.connect()
         
@@ -85,7 +101,7 @@ async def replace_account(banned_account):
     
     try:
         # Query for reserve accounts belonging to the SAME user
-        response = await directus.client.get(
+        response = await directus.safe_get(
             "/items/accounts",
             params={
                 "filter[status][_eq]": "reserve",
@@ -132,11 +148,11 @@ async def health_check_cycle():
     try:
         # Fetch all active accounts
         print(f"DEBUG: Trying to fetch from: {directus.client.base_url}")
-        response = await directus.client.get(
+        response = await directus.safe_get(
             "/items/accounts",
             params={
                 "filter[status][_eq]": "active",
-                "fields": "id,session_string,user_created,work_mode,api_id,api_hash,phone"
+                "fields": "id,session_string,user_created,work_mode,api_id,api_hash,phone,proxy_id.id,proxy_id.host,proxy_id.port,proxy_id.type,proxy_id.username,proxy_id.password,proxy_id.status,proxy_id.assigned_to"
             }
         )
         

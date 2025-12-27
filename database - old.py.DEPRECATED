@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 from sqlmodel import SQLModel, Field, create_engine, Session, select, Column, JSON
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import sessionmaker
+import asyncpg
 
 # Database file
 DATABASE_FILE = "app.db"
@@ -279,3 +280,28 @@ async def set_setting(key: str, value: Any):
             session.add(setting)
         
         await session.commit()
+
+
+# ============================================
+# POSTGRESQL CONNECTION FOR TASK QUEUE
+# ============================================
+
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def get_db_connection():
+    """Get PostgreSQL database connection for task queue operations"""
+    # Get PostgreSQL connection details from environment or use defaults
+    host = os.getenv('POSTGRES_HOST', 'localhost')
+    port = os.getenv('POSTGRES_PORT', '5432')
+    user = os.getenv('POSTGRES_USER', 'postgres')
+    password = os.getenv('POSTGRES_PASSWORD', 'postgres')
+    database = os.getenv('POSTGRES_DB', 'neurocomment')
+    
+    dsn = f"postgresql://{user}:{password}@{host}:{port}/{database}"
+    
+    conn = await asyncpg.connect(dsn=dsn)
+    try:
+        yield conn
+    finally:
+        await conn.close()

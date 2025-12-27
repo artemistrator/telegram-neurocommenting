@@ -199,7 +199,7 @@
                 closeMobileMenu();
 
                 // Execute page-specific scripts if any
-                executePageScripts();
+                await executePageScripts();
 
                 // Initialize page-specific JavaScript for SPA
                 // For templates page, we set cleanup function but don't manually init (uses modular boot)
@@ -249,29 +249,23 @@
         // Execute scripts in loaded content
         function executePageScripts() {
             const scripts = document.getElementById('content').querySelectorAll('script');
+            const promises = [];
+
             scripts.forEach(script => {
                 // Skip already executed scripts
                 if (script.dataset.executed === '1') {
                     return;
                 }
 
+                // Mark original script as executed
+                script.dataset.executed = '1';
+
                 const newScript = document.createElement('script');
 
                 // Copy attributes
-                if (script.type) {
-                    newScript.type = script.type;
-                }
-                if (script.src) {
-                    newScript.src = script.src;
-                } else {
-                    try {
-                        newScript.textContent = script.textContent;
-                    } catch (e) {
-                        console.error('Page script error', e);
-                    }
-                }
+                if (script.type) newScript.type = script.type;
 
-                // Copy additional attributes if they exist
+                // Copy additional attributes
                 if (script.async) newScript.async = script.async;
                 if (script.defer) newScript.defer = script.defer;
                 if (script.nomodule) newScript.nomodule = script.nomodule;
@@ -279,27 +273,40 @@
                 if (script.integrity) newScript.integrity = script.integrity;
                 if (script.referrerPolicy) newScript.referrerPolicy = script.referrerPolicy;
 
-                // Mark original script as executed
-                script.dataset.executed = '1';
+                if (script.src) {
+                    newScript.src = script.src;
+
+                    // Create promise for external scripts
+                    const scriptPromise = new Promise((resolve, reject) => {
+                        newScript.onload = () => {
+                            document.body.removeChild(newScript); // Clean up tag
+                            resolve();
+                        };
+                        newScript.onerror = (e) => {
+                            console.error('Script loading error:', e);
+                            document.body.removeChild(newScript); // Clean up tag
+                            reject(e);
+                        };
+                    });
+                    promises.push(scriptPromise);
+                } else {
+                    try {
+                        newScript.textContent = script.textContent;
+                        // Inline scripts execute immediately upon insertion
+                    } catch (e) {
+                        console.error('Page script error', e);
+                    }
+                }
 
                 document.body.appendChild(newScript);
 
-                // If it's an inline script (no src), remove it immediately after execution
-                // to prevent accumulation of script tags in the DOM
+                // If it's an inline script, remove it immediately after execution
                 if (!newScript.src) {
                     document.body.removeChild(newScript);
-                    return;
                 }
-
-                // Clean up to prevent memory leaks
-                newScript.addEventListener('load', () => {
-                    document.body.removeChild(newScript);
-                });
-                newScript.addEventListener('error', (e) => {
-                    console.error('Script loading error:', e);
-                    document.body.removeChild(newScript);
-                });
             });
+
+            return Promise.all(promises);
         }
 
         // Mobile menu functions

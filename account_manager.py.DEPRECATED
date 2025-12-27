@@ -182,12 +182,21 @@ class AccountManager:
             
             # Use in-memory session to avoid database lock
             # Use dummy credentials for connection test
-            client = TelegramClient(
-                MemorySession(),
-                api_id=1,  # Dummy
-                api_hash='test',  # Dummy
-                proxy=proxy
-            )
+            
+            telegram_conf = {
+                'session': MemorySession(),
+                'api_id': 1,
+                'api_hash': 'test'
+            }
+            
+            # proxy_config expects: type, host, port, username, password
+            # proxy_config passed to this func has exactly this structure
+            
+            try:
+                from backend.services.telegram_client_factory import get_client_from_config
+                client = get_client_from_config(telegram_conf, proxy_config)
+            except Exception as e:
+                return {'status': 'failed', 'error': f'Factory error: {e}'}
             
             start_time = time.time()
             
@@ -244,13 +253,15 @@ class AccountManager:
                     proxy.get('password')
                 )
             
-            # Create client
-            client = TelegramClient(
-                session_path.replace('.session', ''),
-                int(api_id),
-                api_hash,
-                proxy=proxy_tuple
-            )
+            # Create client via factory
+            telegram_conf = {
+                'session': session_path.replace('.session', ''),
+                'api_id': int(api_id),
+                'api_hash': api_hash
+            }
+            
+            from backend.services.telegram_client_factory import get_client_from_config
+            client = get_client_from_config(telegram_conf, proxy)
             
             await client.connect()
             

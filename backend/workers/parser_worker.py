@@ -50,7 +50,7 @@ async def get_unprocessed_posts(limit: int = 50) -> List[Dict]:
             "sort": "id"
         }
         
-        response = await directus.client.get("/items/parsed_posts", params=params)
+        response = await directus.safe_get("/items/parsed_posts", params=params)
         all_posts = response.json().get('data', [])
         
         if not all_posts:
@@ -62,7 +62,7 @@ async def get_unprocessed_posts(limit: int = 50) -> List[Dict]:
             "limit": -1
         }
         
-        queue_response = await directus.client.get("/items/comment_queue", params=queue_params)
+        queue_response = await directus.safe_get("/items/comment_queue", params=queue_params)
         processed_post_ids = {
             item['parsed_post_id']
             for item in queue_response.json().get('data', [])
@@ -101,7 +101,7 @@ async def get_available_commenter_account() -> Optional[Dict]:
             "limit": 1
         }
         
-        response = await directus.client.get("/items/accounts", params=params)
+        response = await directus.safe_get("/items/accounts", params=params)
         accounts = response.json().get('data', [])
         
         if accounts:

@@ -131,7 +131,8 @@ function fillFormFields(data) {
     // Profile fields
     document.getElementById('template-first-name').value = data.first_name || '';
     document.getElementById('template-last-name').value = data.last_name || '';
-    document.getElementById('template-bio').value = data.bio || '';
+    // Bio field is readonly and automatically filled with channel link
+    // document.getElementById('template-bio').value = data.bio || '';
     document.getElementById('template-avatar').value = data.avatar || '';
     document.getElementById('template-channel-title').value = data.channel_title || '';
     document.getElementById('template-channel-description').value = data.channel_description || '';
@@ -153,7 +154,7 @@ function collectFormData() {
         name: document.getElementById('template-name').value.trim(),
         first_name: document.getElementById('template-first-name').value.trim() || null,
         last_name: document.getElementById('template-last-name').value.trim() || null,
-        bio: document.getElementById('template-bio').value.trim() || null,
+        // bio: document.getElementById('template-bio').value.trim() || null, // Bio is automatically set to channel link
         avatar: document.getElementById('template-avatar').value.trim() || null,
         channel_title: document.getElementById('template-channel-title').value.trim() || null,
         channel_description: document.getElementById('template-channel-description').value.trim() || null,

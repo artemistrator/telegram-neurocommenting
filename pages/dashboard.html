@@ -1,70 +1,105 @@
-<div class="max-w-6xl" data-testid="page-dashboard">
-    <h1 class="text-3xl font-bold text-gray-800 mb-8">Дашборд</h1>
+<div class="max-w-7xl" data-testid="page-dashboard">
+    <div class="flex justify-between items-center mb-8">
+        <h1 class="text-3xl font-bold text-gray-800">Analytics Dashboard</h1>
+        <button id="refresh-btn" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition">
+            🔄 Refresh
+        </button>
+    </div>
 
-    <!-- Metrics Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8" data-testid="dashboard-stats">
+    <!-- Stats Cards (4 columns) -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8" id="stats-cards">
+        <!-- Accounts Card -->
         <div class="bg-white rounded-lg shadow-md p-6">
             <div class="flex items-center justify-between mb-2">
-                <h3 class="text-sm font-medium text-gray-600">Активных аккаунтов</h3>
-                <span class="text-2xl">👤</span>
+                <h3 class="text-sm font-medium text-gray-600">Accounts</h3>
+                <span class="text-3xl">👤</span>
             </div>
-            <p class="text-3xl font-bold text-gray-900">0</p>
-            <p class="text-xs text-gray-500 mt-1">из 0 всего</p>
+            <p class="text-3xl font-bold text-gray-900" id="stat-accounts-total">0</p>
+            <div class="mt-2 text-xs text-gray-500">
+                <span class="text-green-600" id="stat-accounts-active">0</span> active / 
+                <span class="text-red-600" id="stat-accounts-banned">0</span> banned / 
+                <span class="text-blue-600" id="stat-accounts-in-setup">0</span> in setup
+            </div>
         </div>
 
+        <!-- Proxies Card -->
         <div class="bg-white rounded-lg shadow-md p-6">
             <div class="flex items-center justify-between mb-2">
-                <h3 class="text-sm font-medium text-gray-600">Каналов</h3>
-                <span class="text-2xl">📢</span>
+                <h3 class="text-sm font-medium text-gray-600">Proxies</h3>
+                <span class="text-3xl">🌐</span>
             </div>
-            <p class="text-3xl font-bold text-gray-900">0</p>
-            <p class="text-xs text-gray-500 mt-1">в мониторинге</p>
+            <p class="text-3xl font-bold text-gray-900" id="stat-proxies-total">0</p>
+            <div class="mt-2 text-xs text-gray-500">
+                <span class="text-green-600" id="stat-proxies-alive">0</span> alive / 
+                <span class="text-red-600" id="stat-proxies-dead">0</span> dead / 
+                <span class="text-blue-600" id="stat-proxies-free">0</span> free
+            </div>
         </div>
 
+        <!-- Tasks Card -->
         <div class="bg-white rounded-lg shadow-md p-6">
             <div class="flex items-center justify-between mb-2">
-                <h3 class="text-sm font-medium text-gray-600">Комментариев</h3>
-                <span class="text-2xl">💬</span>
+                <h3 class="text-sm font-medium text-gray-600">Task Queue</h3>
+                <span class="text-3xl">📋</span>
             </div>
-            <p class="text-3xl font-bold text-gray-900">0</p>
-            <p class="text-xs text-gray-500 mt-1">за сегодня</p>
+            <p class="text-3xl font-bold text-gray-900" id="stat-tasks-pending">0</p>
+            <div class="mt-2 text-xs text-gray-500">
+                <span class="text-red-600" id="stat-tasks-failed">0</span> failed
+            </div>
         </div>
 
+        <!-- Comments Card -->
         <div class="bg-white rounded-lg shadow-md p-6">
             <div class="flex items-center justify-between mb-2">
-                <h3 class="text-sm font-medium text-gray-600">Токенов</h3>
-                <span class="text-2xl">🎫</span>
+                <h3 class="text-sm font-medium text-gray-600">Comments Queue</h3>
+                <span class="text-3xl">💬</span>
             </div>
-            <p class="text-3xl font-bold text-gray-900">0</p>
-            <p class="text-xs text-gray-500 mt-1">использовано</p>
+            <p class="text-3xl font-bold text-gray-900" id="stat-comments-pending">0</p>
+            <div class="mt-2 text-xs text-gray-500">
+                pending
+            </div>
         </div>
     </div>
 
-    <!-- Info Message -->
-    <div class="bg-white rounded-lg shadow-md p-8 text-center">
-        <svg class="mx-auto h-16 w-16 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-        </svg>
-        <h2 class="text-2xl font-semibold text-gray-800 mb-2">Дашборд в разработке</h2>
-        <p class="text-gray-600 mb-6">
-            Дашборд будет доступен после настройки аккаунтов и запуска мониторинга.<br>
-            Здесь вы сможете отслеживать статистику в реальном времени.
-        </p>
-        <div class="inline-flex items-center text-sm text-blue-600">
-            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            Начните с добавления аккаунтов и настройки мониторинга
+    <!-- Charts (2 columns) -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Activity Chart -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Daily Activity</h2>
+            <div style="position: relative; height: 300px; width: 100%;">
+                <canvas id="activity-chart" height="300"></canvas>
+            </div>
+        </div>
+
+        <!-- System Health Chart -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">System Health</h2>
+            <div style="position: relative; height: 300px; width: 100%;">
+                <canvas id="health-chart" height="300"></canvas>
+            </div>
         </div>
     </div>
 
-    <!-- Activity Chart Placeholder -->
-    <div class="bg-white rounded-lg shadow-md p-6 mt-6">
-        <h2 class="text-xl font-semibold text-gray-800 mb-4">Активность</h2>
-        <div class="h-64 flex items-center justify-center bg-gray-50 rounded">
-            <p class="text-gray-400">График активности появится здесь</p>
+    <!-- Recent Activity Tables -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Recent Comments -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Recent Comments</h2>
+            <div id="recent-comments" class="space-y-2">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+
+        <!-- Recent Errors -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Recent Errors</h2>
+            <div id="recent-errors" class="space-y-2">
+                <!-- Populated by JS -->
+            </div>
         </div>
     </div>
 </div>
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="/static/js/pages/dashboard.page.js?v=debug1"></script>

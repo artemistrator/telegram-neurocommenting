@@ -3,6 +3,7 @@ Telegram Listener Worker
 
 This worker monitors Telegram channels and saves parsed messages to Directus.
 It uses accounts with work_mode='listener' to fetch messages from active channels.
+Refactored to use TaskQueueManager architecture.
 """
 
 import asyncio
@@ -11,7 +12,7 @@ import sys
 import random
 from pathlib import Path
 from datetime import datetime
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 
 from telethon import TelegramClient
 from telethon.errors import (
@@ -27,15 +28,24 @@ from telethon.tl.types import Channel
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from backend.directus_client import DirectusClient
-
-# Initialize Directus client
-directus = DirectusClient()
+from backend.services.task_queue_manager import TaskQueueManager
 
 # Configuration
-CHECK_INTERVAL = 300  # 5 minutes between cycles
 CHANNEL_DELAY_MIN = 2  # Minimum delay between channels (seconds)
 CHANNEL_DELAY_MAX = 5  # Maximum delay between channels (seconds)
 MESSAGES_PER_FETCH = 100  # Number of messages to fetch per channel
+
+
+class TaskHandler:
+    async def get_supported_task_types(self) -> List[str]:
+        raise NotImplementedError
+    
+    async def process_task(self, task: Dict[str, Any]) -> bool:
+        raise NotImplementedError
+
+
+# Initialize Directus client
+directus = DirectusClient()
 
 
 async def check_collections():
@@ -47,14 +57,14 @@ async def check_collections():
     
     try:
         # Try to fetch from collections to verify they exist
-        await directus.client.get("/items/channels", params={"limit": 1})
+        await directus.safe_get("/items/channels", params={"limit": 1})
         print("✓ Collection 'channels' exists")
     except Exception as e:
         print(f"⚠ WARNING: Collection 'channels' may not exist: {e}")
         print("  Required fields: id, url, status, last_parsed_id, user_created")
     
     try:
-        await directus.client.get("/items/parsed_posts", params={"limit": 1})
+        await directus.safe_get("/items/parsed_posts", params={"limit": 1})
         print("✓ Collection 'parsed_posts' exists")
     except Exception as e:
         print(f"⚠ WARNING: Collection 'parsed_posts' may not exist: {e}")
@@ -73,6 +83,7 @@ async def get_active_channels(user_id: Optional[str] = None) -> List[Dict]:
     """
     params = {
         "filter[status][_eq]": "active",
+        "filter[url][_nnull]": "true",
         "fields": "id,url,last_parsed_id,user_created",
         "limit": -1
     }
@@ -81,7 +92,7 @@ async def get_active_channels(user_id: Optional[str] = None) -> List[Dict]:
         params["filter[user_created][_eq]"] = user_id
     
     try:
-        response = await directus.client.get("/items/channels", params=params)
+        response = await directus.safe_get("/items/channels", params=params)
         channels = response.json().get('data', [])
         print(f"Found {len(channels)} active channels")
         return channels
@@ -103,7 +114,9 @@ async def get_listener_account(user_id: Optional[str] = None) -> Optional[Dict]:
     params = {
         "filter[status][_eq]": "active",
         "filter[work_mode][_eq]": "listener",
-        "fields": "id,phone,session_string,api_id,api_hash,user_created",
+        "filter[session_string][_nnull]": "true",
+        "filter[proxy_unavailable][_neq]": "true",
+        "fields": "id,phone,session_string,api_id,api_hash,user_created,proxy_unavailable,proxy_id.id,proxy_id.host,proxy_id.port,proxy_id.type,proxy_id.username,proxy_id.password,proxy_id.status,proxy_id.assigned_to",
         "limit": 1
     }
     
@@ -111,14 +124,28 @@ async def get_listener_account(user_id: Optional[str] = None) -> Optional[Dict]:
         params["filter[user_created][_eq]"] = user_id
     
     try:
-        response = await directus.client.get("/items/accounts", params=params)
-        accounts = response.json().get('data', [])
+        print("[DEBUG listener] get_listener_account params:", params)
+        
+        response = await directus.safe_get("/items/accounts", params=params)
+        
+        try:
+            raw_text = response.text
+        except Exception:
+            raw_text = "<no text>"
+            
+        print(f"[DEBUG listener] get_listener_account status={response.status_code}")
+        print(f"[DEBUG listener] get_listener_account raw response: {raw_text[:500]}")
+        
+        data = response.json()
+        accounts = data.get('data', [])
+        
+        print(f"[DEBUG listener] get_listener_account parsed data count={len(accounts)}")
         
         if accounts:
             print(f"Using listener account: {accounts[0]['phone']}")
             return accounts[0]
         else:
-            print("⚠ No available listener accounts found")
+            print("⚠ No available listener accounts found (data array empty)")
             return None
     except Exception as e:
         print(f"Error fetching listener account: {e}")
@@ -138,38 +165,61 @@ async def update_last_parsed_id(channel_id: str, last_id: int):
     """Update last_parsed_id for a channel in Directus."""
     try:
         await directus.update_item("channels", channel_id, {"last_parsed_id": last_id})
-        print(f"Updated channel {channel_id} last_parsed_id to: {last_id}")
+        # print(f"Updated channel {channel_id} last_parsed_id to: {last_id}")
     except Exception as e:
         print(f"Error updating last_parsed_id: {e}")
 
 
-async def save_parsed_post(channel_url: str, post_id: int, text: str, user_created: str):
-    """Save a parsed post to Directus."""
+async def save_parsed_post(channel_url: str, post_id: int, text: str, user_created: str) -> bool:
+    """Save a parsed post to Directus. Returns True if saved, False if duplicate/error."""
     try:
+        # Idempotency check: see if it already exists
+        params = {
+            "filter[channel_url][_eq]": channel_url,
+            "filter[post_id][_eq]": post_id,
+            "fields": "id",
+            "limit": 1
+        }
+        
+        existing = await directus.safe_get("/items/parsed_posts", params=params)
+        if existing.json().get('data'):
+            # Already exists
+            return False
+
         post_data = {
             "channel_url": channel_url,
             "post_id": post_id,
             "text": text or "",
+            "status": "published",
             "user_created": user_created
         }
         
         await directus.create_item("parsed_posts", post_data)
+        return True
     except Exception as e:
         print(f"Error saving parsed post {post_id}: {e}")
+        return False
 
 
-async def parse_channel(client: TelegramClient, channel: Dict):
+async def parse_channel(client: TelegramClient, task_payload: Dict):
     """
     Parse messages from a single Telegram channel.
     
     Args:
         client: Connected Telethon client
-        channel: Channel dictionary from Directus
+        task_payload: Task payload containing channel_url, channel_id, and last_parsed_id
     """
-    channel_url = channel['url']
-    channel_id = channel['id']
-    last_parsed_id = channel.get('last_parsed_id', 0) or 0
-    user_created = channel.get('user_created')
+    channel_url = task_payload['channel_url']
+    channel_id = task_payload['channel_id']
+    last_parsed_id = task_payload.get('last_parsed_id', 0) or 0
+    
+    # For listener tasks, we'll fetch user_created from the channels table
+    try:
+        channel_info = await directus.get_item("channels", channel_id, params={"fields": "user_created"})
+        user_created = channel_info.get('user_created') if channel_info else None
+    except Exception as e:
+        print(f"Error fetching channel info for {channel_id}: {e}")
+        user_created = None
     
     print(f"\n📡 Parsing channel: {channel_url}")
     print(f"   Last parsed ID: {last_parsed_id}")
@@ -202,18 +252,30 @@ async def parse_channel(client: TelegramClient, channel: Dict):
         messages.reverse()
         
         new_last_id = last_parsed_id
+        saved_count = 0
+        
         for msg in messages:
-            await save_parsed_post(
+            is_saved = await save_parsed_post(
                 channel_url=channel_url,
                 post_id=msg.id,
                 text=msg.text,
                 user_created=user_created
             )
+            if is_saved:
+                saved_count += 1
+            
             new_last_id = max(new_last_id, msg.id)
         
-        # Update last_parsed_id
-        await update_last_parsed_id(channel_id, new_last_id)
-        print(f"   ✓ Saved {len(messages)} messages, new last_id: {new_last_id}")
+        # Update last_parsed_id if we have new messages (even if they were all duplicates, update usage cursor)
+        # But per requirements: "если найден хотя бы один новый, обновить channels.last_parsed_id"
+        # We'll update it to the max id seen to keep things moving forward.
+        if new_last_id > last_parsed_id:
+            await update_last_parsed_id(channel_id, new_last_id)
+            
+        if saved_count > 0:
+            print(f"   ✓ Saved {saved_count} new posts for channel {channel_url}")
+        else:
+            print(f"   No new posts saved (duplicates or skipped)")
         
     except (ChannelPrivateError, ChannelBannedError) as e:
         print(f"   ✗ Channel is private or banned: {e}")
@@ -232,87 +294,93 @@ async def parse_channel(client: TelegramClient, channel: Dict):
         print(f"   ✗ Error parsing channel: {e}")
 
 
-async def listener_cycle():
-    """
-    Main listener cycle:
-    1. Fetch active channels
-    2. Fetch listener account
-    3. Connect to Telegram
-    4. Parse each channel
-    """
-    print("\n" + "="*60)
-    print(f"🔄 Starting listener cycle at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print("="*60)
-    
-    # Fetch channels
-    channels = await get_active_channels()
-    
-    if not channels:
-        print("No active channels to parse")
-        return
-    
-    # Fetch listener account
-    account = await get_listener_account()
-    
-    if not account:
-        print("❌ No listener account available, skipping cycle")
-        return
-    
-    # Connect to Telegram
-    client = None
-    try:
-        # Use session string if available
-        session_string = account.get('session_string')
-        api_id = int(account['api_id']) if account.get('api_id') else 2040
-        api_hash = account.get('api_hash') or "b18441a1ff607e10a989891a5462e627"
+class ListenerTaskHandler(TaskHandler):
+    async def get_supported_task_types(self) -> List[str]:
+        return ['fetch_posts']
+
+    async def process_task(self, task: Dict[str, Any]) -> bool:
+        """
+        Process a fetch_posts task.
         
-        if session_string:
-            from telethon.sessions import StringSession
-            client = TelegramClient(
-                StringSession(session_string),
-                api_id,
-                api_hash
-            )
-        else:
-            print("⚠ Account has no session_string, cannot connect")
-            return
-        
-        await client.connect()
-        
-        if not await client.is_user_authorized():
-            print("❌ Account is not authorized")
-            return
-        
-        print(f"✓ Connected to Telegram as {account['phone']}")
-        
-        # Parse each channel
-        for i, channel in enumerate(channels, 1):
-            print(f"\n[{i}/{len(channels)}]", end=" ")
-            await parse_channel(client, channel)
+        Args:
+            task: Task dictionary with type 'fetch_posts' and payload
             
-            # Delay between channels (except last one)
-            if i < len(channels):
-                delay = random.uniform(CHANNEL_DELAY_MIN, CHANNEL_DELAY_MAX)
-                print(f"   ⏱ Sleeping {delay:.1f}s before next channel...")
-                await asyncio.sleep(delay)
+        Returns:
+            True if task was processed successfully, False otherwise
+        """
+        print(f"\n📡 Processing fetch_posts task: {task['id']}")
         
-        print(f"\n✓ Cycle completed, parsed {len(channels)} channels")
+        task_payload = task['payload']
+        channel_url = task_payload['channel_url']
+        channel_id = task_payload['channel_id']
         
-    except Exception as e:
-        print(f"❌ Error in listener cycle: {e}")
-        import traceback
-        traceback.print_exc()
-    
-    finally:
-        if client:
-            await client.disconnect()
-            print("Disconnected from Telegram")
+        # Get a listener account
+        account = await get_listener_account()
+        
+        if not account:
+            error_msg = f"No available listener account for task {task['id']}"
+            print(f"❌ {error_msg}")
+            raise Exception(error_msg)  # This will cause the task to be retried
+        
+        print(f"Using listener account: {account['phone']}")
+        
+        # Guard: Check for proxy unavailability
+        if account.get('proxy_unavailable'):
+            error_msg = f"Listener account {account['phone']} has proxy_unavailable=True"
+            print(f"⚠ {error_msg}")
+            raise Exception(error_msg)  # This will cause the task to be retried
+        
+        client = None
+        try:
+            # Create client via factory (with mandatory proxy)
+            try:
+                from backend.services.telegram_client_factory import get_client_for_account, format_proxy
+                
+                client = await get_client_for_account(account, directus)
+                
+                # Safe logging before connect (no credentials)
+                proxy = account.get('proxy_id')
+                if proxy:
+                    print(f"[TG] connect account_id={account['id']} phone={account['phone']} via {format_proxy(proxy)}")
+                else:
+                    print(f"[TG] connect account_id={account['id']} phone={account['phone']} - no proxy info")
+                    
+            except (ValueError, RuntimeError) as e:
+                # Factory error: missing proxy, invalid proxy status, etc.
+                error_msg = f"Cannot create Telegram client for account {account['id']}: {e}"
+                print(f"❌ {error_msg}")
+                raise Exception(error_msg)
+            
+            await client.connect()
+            
+            if not await client.is_user_authorized():
+                error_msg = f"Account {account['phone']} is not authorized"
+                print(f"❌ {error_msg}")
+                raise Exception(error_msg)
+            
+            print(f"✓ Connected to Telegram as {account['phone']}")
+            
+            # Call parse_channel with task payload
+            await parse_channel(client, task_payload)
+            
+            print(f"✓ Task {task['id']} completed successfully")
+            return True
+            
+        except Exception as e:
+            print(f"❌ Error processing task {task['id']}: {e}")
+            import traceback
+            traceback.print_exc()
+            raise  # Re-raise to let the task manager handle retries
+        
+        finally:
+            if client:
+                await client.disconnect()
+                print("Disconnected from Telegram")
 
 
 async def run_listener_worker():
-    """Main worker loop."""
-    print("🚀 Telegram Listener Worker starting...")
-    print(f"   Check interval: {CHECK_INTERVAL}s")
+    """Main worker loop using TaskQueueManager."""
+    print("🚀 Telegram Listener Worker starting with TaskQueueManager...")
     print(f"   Messages per fetch: {MESSAGES_PER_FETCH}")
     
     # Login to Directus
@@ -326,17 +394,42 @@ async def run_listener_worker():
     # Check collections
     await check_collections()
     
-    # Main loop
+    # Initialize TaskQueueManager with ListenerTaskHandler
+    task_queue_manager = TaskQueueManager()
+    listener_handler = ListenerTaskHandler()
+    
+    print("Starting TaskQueueManager with ListenerTaskHandler...")
+    
+    # Run the TaskQueueManager (this handles the main loop)
+    worker_id = 'listener-worker'
+    task_types = await listener_handler.get_supported_task_types()
+    
+    print(f"Listening for tasks: {task_types}, worker_id: {worker_id}")
+    
     while True:
         try:
-            await listener_cycle()
+            # Claim a task from the queue
+            task = await task_queue_manager.claim_task(worker_id, task_types)
+            
+            if task:
+                print(f"Claimed task {task['id']} of type {task['type']}")
+                try:
+                    success = await listener_handler.process_task(task)
+                    if success:
+                        await task_queue_manager.complete_task(task['id'])
+                    else:
+                        await task_queue_manager.fail_task(task['id'], "Task processing failed")
+                except Exception as e:
+                    await task_queue_manager.fail_task(task['id'], str(e))
+            else:
+                # No tasks available, wait before checking again
+                await asyncio.sleep(5)  # Check for new tasks every 5 seconds
+                
         except Exception as e:
-            print(f"❌ Unexpected error in main loop: {e}")
+            print(f"❌ Main loop error: {e}")
             import traceback
             traceback.print_exc()
-        
-        print(f"\n💤 Sleeping for {CHECK_INTERVAL}s until next cycle...")
-        await asyncio.sleep(CHECK_INTERVAL)
+            await asyncio.sleep(5)  # Wait before continuing
 
 
 if __name__ == "__main__":

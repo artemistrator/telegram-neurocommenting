@@ -1,0 +1,41 @@
+
+def get_client_from_config(telegram_config: dict, proxy_dict: Optional[dict] = None) -> TelegramClient:
+    """
+    Create a TelegramClient from local configuration with optional proxy.
+    
+    Args:
+        telegram_config: Config dictionary with keys: session, api_id, api_hash
+        proxy_dict: Optional proxy config: {type, host, port, username, password}
+        
+    Returns:
+        TelegramClient instance
+        
+    Raises:
+        ValueError: If config is invalid
+    """
+    if not telegram_config.get('session'):
+        raise ValueError("Config missing 'session'")
+    if not telegram_config.get('api_id'):
+        raise ValueError("Config missing 'api_id'")
+    if not telegram_config.get('api_hash'):
+        raise ValueError("Config missing 'api_hash'")
+        
+    proxy_config = None
+    if proxy_dict and proxy_dict.get('host'):
+        # Validate proxy dict fields similar to map_proxy_type but permissive
+        # Reuse build_telethon_proxy if format matches, otherwise map manually
+        
+        # Ensure 'type' exists
+        if not proxy_dict.get('type'):
+            proxy_dict['type'] = 'socks5' # Default
+            
+        proxy_config = build_telethon_proxy(proxy_dict)
+        
+    client = TelegramClient(
+        telegram_config['session'],
+        int(telegram_config['api_id']),
+        telegram_config['api_hash'],
+        proxy=proxy_config
+    )
+    
+    return client

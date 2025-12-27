@@ -1,0 +1,713 @@
+<div class="max-w-6xl mx-auto" data-testid="page-wizard">
+    <h1 class="text-3xl font-bold text-gray-800 mb-8">Campaign Wizard</h1>
+
+    <!-- Stepper Navigation -->
+    <div class="flex justify-between items-center mb-8">
+        <div class="flex items-center w-full">
+            <!-- Step 1: Proxies -->
+            <div class="flex flex-col items-center w-1/5">
+                <button id="step-1-btn" class="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center text-lg font-bold step-btn active" data-step="1">
+                    1
+                </button>
+                <span class="mt-2 text-sm font-medium text-center">Proxies</span>
+            </div>
+
+            <!-- Connector -->
+            <div class="h-1 w-1/5 bg-gray-300 relative -ml-4 -mr-4">
+                <div class="absolute left-0 top-0 h-1 bg-blue-500 w-0 transition-all duration-300 step-progress" style="width: 0%"></div>
+            </div>
+
+            <!-- Step 2: Accounts -->
+            <div class="flex flex-col items-center w-1/5">
+                <button id="step-2-btn" class="w-10 h-10 rounded-full bg-gray-300 text-white flex items-center justify-center text-lg font-bold step-btn" data-step="2">
+                    2
+                </button>
+                <span class="mt-2 text-sm font-medium text-center">Accounts</span>
+            </div>
+
+            <!-- Connector -->
+            <div class="h-1 w-1/5 bg-gray-300 relative -ml-4 -mr-4">
+                <div class="absolute left-0 top-0 h-1 bg-blue-500 w-0 transition-all duration-300 step-progress" style="width: 0%"></div>
+            </div>
+
+            <!-- Step 3: Templates -->
+            <div class="flex flex-col items-center w-1/5">
+                <button id="step-3-btn" class="w-10 h-10 rounded-full bg-gray-300 text-white flex items-center justify-center text-lg font-bold step-btn" data-step="3">
+                    3
+                </button>
+                <span class="mt-2 text-sm font-medium text-center">Templates</span>
+            </div>
+
+            <!-- Connector -->
+            <div class="h-1 w-1/5 bg-gray-300 relative -ml-4 -mr-4">
+                <div class="absolute left-0 top-0 h-1 bg-blue-500 w-0 transition-all duration-300 step-progress" style="width: 0%"></div>
+            </div>
+
+            <!-- Step 4: Channels -->
+            <div class="flex flex-col items-center w-1/5">
+                <button id="step-4-btn" class="w-10 h-10 rounded-full bg-gray-300 text-white flex items-center justify-center text-lg font-bold step-btn" data-step="4">
+                    4
+                </button>
+                <span class="mt-2 text-sm font-medium text-center">Channels</span>
+            </div>
+
+            <!-- Connector -->
+            <div class="h-1 w-1/5 bg-gray-300 relative -ml-4 -mr-4">
+                <div class="absolute left-0 top-0 h-1 bg-blue-500 w-0 transition-all duration-300 step-progress" style="width: 0%"></div>
+            </div>
+
+            <!-- Step 5: Launch -->
+            <div class="flex flex-col items-center w-1/5">
+                <button id="step-5-btn" class="w-10 h-10 rounded-full bg-gray-300 text-white flex items-center justify-center text-lg font-bold step-btn" data-step="5">
+                    5
+                </button>
+                <span class="mt-2 text-sm font-medium text-center">Launch</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step Content Containers -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <!-- Step 1: Proxies -->
+        <div id="step-1-proxies" class="step-content active">
+            <div class="flex justify-between items-center mb-8">
+                <h2 class="text-2xl font-bold text-gray-800">Управление Прокси</h2>
+                <div class="flex gap-3">
+                    <button id="test-all-proxies-btn" onclick="testAllProxies()"
+                        class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-medium transition">
+                        🔍 Проверить все
+                    </button>
+                    <button id="import-proxy-btn" onclick="openImportProxyModal()"
+                        class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition">
+                        📥 Импорт списка
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div class="bg-white rounded-lg shadow p-4">
+                    <p class="text-sm text-gray-600">Всего прокси</p>
+                    <p class="text-2xl font-bold text-gray-900" id="total-proxies">0</p>
+                </div>
+                <div class="bg-white rounded-lg shadow p-4">
+                    <p class="text-sm text-gray-600">Живых (active)</p>
+                    <p class="text-2xl font-bold text-green-600" id="active-proxies">0</p>
+                </div>
+                <div class="bg-white rounded-lg shadow p-4">
+                    <p class="text-sm text-gray-600">Мертвых (dead)</p>
+                    <p class="text-2xl font-bold text-red-600" id="dead-proxies">0</p>
+                </div>
+                <div class="bg-white rounded-lg shadow p-4">
+                    <p class="text-sm text-gray-600">Свободных</p>
+                    <p class="text-2xl font-bold text-blue-600" id="free-proxies">0</p>
+                </div>
+            </div>
+
+            <!-- Proxies Table -->
+            <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200" data-testid="proxies-table">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    IP:Port</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Тип</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Auth (User/Pass)</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Статус</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Пинг</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Привязка</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Последняя проверка</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody id="proxies-table" class="bg-white divide-y divide-gray-200">
+                            <!-- Proxies will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Accounts -->
+        <div id="step-2-accounts" class="step-content hidden">
+            <div class="flex justify-between items-center mb-8">
+                <h2 class="text-2xl font-bold text-gray-800">Управление Аккаунтами</h2>
+                <button id="import-accounts-btn" onclick="importAccountsAutoProxy()"
+                    class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition">
+                    📥 Импорт аккаунтов
+                </button>
+            </div>
+
+            <!-- Stats Cards - Updated to 2 rows for better layout -->
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+                <div class="bg-white rounded-lg shadow p-4">
+                    <p class="text-sm text-gray-600">Всего аккаунтов</p>
+                    <p class="text-2xl font-bold text-gray-900" id="total-accounts">0</p>
+                </div>
+                <div class="bg-white rounded-lg shadow p-4">
+                    <p class="text-sm text-gray-600">Активных</p>
+                    <p class="text-2xl font-bold text-green-600" id="active-accounts">0</p>
+                </div>
+                <div class="bg-white rounded-lg shadow p-4">
+                    <p class="text-sm text-gray-600">Setup завершен</p>
+                    <p class="text-2xl font-bold text-blue-600" id="setup-completed">0</p>
+                </div>
+                <div class="bg-white rounded-lg shadow p-4">
+                    <p class="text-sm text-gray-600">С прокси</p>
+                    <p class="text-2xl font-bold text-purple-600" id="with-proxy">0</p>
+                </div>
+                <div class="bg-white rounded-lg shadow p-4">
+                    <p class="text-sm text-gray-600">Забанены</p>
+                    <p class="text-2xl font-bold text-red-600" id="banned-accounts">0</p>
+                </div>
+                <div class="bg-white rounded-lg shadow p-4">
+                    <p class="text-sm text-gray-600">В резерве</p>
+                    <p class="text-2xl font-bold text-yellow-600" id="reserve-accounts">0</p>
+                </div>
+            </div>
+
+            <!-- Accounts Table -->
+            <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200" data-testid="accounts-table">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Профиль</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Роль</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Прогрев</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Статус</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Setup</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Шаблон</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Прокси</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Проверка</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody id="accounts-table" class="bg-white divide-y divide-gray-200">
+                            <!-- Accounts will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3: Templates -->
+        <div id="step-3-templates" class="step-content hidden">
+            <div class="flex justify-between items-center mb-8">
+                <h2 class="text-2xl font-bold text-gray-800">Шаблоны Настройки</h2>
+                <div class="flex gap-2">
+                    <button onclick="loadTemplates()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg font-medium transition flex items-center">
+                        🔄 Обновить
+                    </button>
+                    <button onclick="openCreateTemplateModal()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition">
+                        ➕ Создать шаблон
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Templates List -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="templates-container" data-testid="templates-list">
+                <!-- Templates will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Step 4: Targets -->
+        <div id="step-4-targets" class="step-content hidden">
+            <!-- Search Form -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h2 class="text-xl font-semibold mb-4 text-gray-700">Параметры поиска</h2>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Ключевые слова (по одному на строку)</label>
+                    <textarea id="keywords" rows="4"
+                        class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="python&#10;javascript&#10;фриланс"></textarea>
+                    <p class="text-xs text-gray-500 mt-1">Каждое ключевое слово будет обработано отдельно.</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Минимум подписчиков</label>
+                        <input type="number" id="min_subscribers" value="100" min="0"
+                            class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div class="flex items-end">
+                        <button id="search-btn" data-testid="parser-search-btn"
+                            class="w-full bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md font-medium transition flex justify-center items-center"
+                            onclick="startSearch()">
+                            <span class="btn-text">Начать поиск</span>
+                            <svg class="loading hidden animate-spin ml-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg"
+                                fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+                                </circle>
+                                <path class="opacity-75" fill="currentColor"
+                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                </path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Table -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold text-gray-700 flex items-center">
+                        Результаты поиска
+                        <span id="results-count"
+                            class="ml-2 bg-gray-100 text-gray-600 text-sm font-medium px-2.5 py-0.5 rounded-full">0</span>
+                    </h2>
+                    <div class="flex space-x-2">
+                        <button id="refresh-btn"
+                            class="text-gray-600 hover:text-gray-800 p-2 rounded-md transition border border-gray-300 hover:bg-gray-50 bg-white"
+                            title="Обновить результаты"
+                            onclick="refreshSearchResults()">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                                </path>
+                            </svg>
+                        </button>
+                        <button id="add-selected-btn" disabled
+                            class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md font-medium transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                            onclick="addSelectedToTargets()">
+                            <span class="mr-1">➕</span> Добавить в цели
+                        </button>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto relative min-h-[200px]">
+                    <!-- Loading Overlay -->
+                    <div id="table-loading"
+                        class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10 hidden">
+                        <svg class="animate-spin h-8 w-8 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none"
+                            viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                            </path>
+                        </svg>
+                    </div>
+
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10">
+                                    <input type="checkbox" id="select-all"
+                                        class="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
+                                        onclick="toggleSelectAll()">
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Название
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Подписчики
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Комменты
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Ссылка
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="results-table" class="bg-white divide-y divide-gray-200">
+                            <!-- Results will be inserted here -->
+                        </tbody>
+                    </table>
+
+                    <div id="no-results" class="hidden text-center py-10 text-gray-500">
+                        Результатов пока нет. Запустите поиск или обновите таблицу.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Selected Targets -->
+            <div class="bg-white rounded-lg shadow-md p-6 mt-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold text-gray-700 flex items-center">
+                        Выбранные цели
+                        <span id="selected-targets-count"
+                            class="ml-2 bg-blue-100 text-blue-800 text-sm font-medium px-2.5 py-0.5 rounded-full">0</span>
+                    </h2>
+                    <button id="clear-targets-btn"
+                        class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md font-medium transition"
+                        onclick="clearSelectedTargets()">
+                        Очистить все
+                    </button>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Название
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Подписчики
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Ссылка
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Действия
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="selected-targets-table" class="bg-white divide-y divide-gray-200">
+                            <!-- Selected targets will be inserted here -->
+                        </tbody>
+                    </table>
+
+                    <div id="no-selected-targets" class="hidden text-center py-10 text-gray-500">
+                        Нет выбранных целей. Добавьте цели из результатов поиска.
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Manual Input Section -->
+            <div class="bg-white rounded-lg shadow-md p-6 mt-6">
+                <h3 class="text-lg font-semibold mb-3 text-gray-700">Или добавить вручную</h3>
+                <textarea id="manual-urls" rows="3" 
+                    placeholder="https://t.me/pythonru&#10;@channel_name"
+                    class="w-full p-2 border rounded-md mb-3"></textarea>
+                <button id="add-manual-btn" 
+                    class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-md font-medium transition"
+                    onclick="addManualChannels()">
+                    ➕ Добавить вручную
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 5: Matrix -->
+        <div id="step-5-matrix" class="step-content hidden">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Campaign Matrix</h2>
+            <p class="text-gray-600 mb-6">Assign accounts and templates to your selected targets.</p>
+            
+            <!-- Matrix content area -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold text-gray-800">Target Assignments</h3>
+                    <button id="auto-distribute-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium transition"
+                        onclick="autoDistribute()">
+                        Auto-Distribute
+                    </button>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Channel Name
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Assigned Account
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Assigned Template
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="matrix-table" class="bg-white divide-y divide-gray-200">
+                            <!-- Matrix rows will be inserted here -->
+                        </tbody>
+                    </table>
+
+                    <div id="no-matrix-rows" class="hidden text-center py-10 text-gray-500">
+                        No targets selected. Go back to Step 4 to select targets.
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-6 flex justify-between">
+                <button id="prev-step-btn-matrix" class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-3 rounded-lg font-medium transition"
+                    onclick="goToStep(4)">
+                    ← Previous Step
+                </button>
+                <button id="finish-btn" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition"
+                    onclick="finishCampaign()">
+                    Finish Campaign
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-4 right-4 bg-white shadow-lg rounded-lg p-4 hidden transition-all z-50 max-w-sm">
+        <div class="flex items-center">
+            <span id="toast-icon" class="text-2xl mr-3"></span>
+            <p id="toast-message" class="text-sm font-medium text-gray-800"></p>
+        </div>
+    </div>
+
+    <!-- Import Proxy Modal -->
+    <div id="importProxyModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center p-6 border-b">
+                <h2 class="text-2xl font-bold text-gray-800">Импорт прокси</h2>
+                <button onclick="closeImportProxyModal()" class="text-gray-500 hover:text-gray-700">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <div class="p-6">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Тип прокси по умолчанию</label>
+                    <select id="default-proxy-type" class="w-full p-2 border border-gray-300 rounded-md">
+                        <option value="socks5">SOCKS5</option>
+                        <option value="socks4">SOCKS4</option>
+                        <option value="http">HTTP</option>
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1">
+                        Используется для прокси без явного указания протокола
+                    </p>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Список прокси</label>
+                    <textarea id="proxy-list" rows="10"
+                        class="w-full p-3 border border-gray-300 rounded-md font-mono text-sm"
+                        placeholder="Вставьте список прокси в формате:&#10;ip:port:user:pass&#10;или&#10;socks5://user:pass@ip:port&#10;или&#10;ip:port (без авторизации)"></textarea>
+                    <p class="text-xs text-gray-500 mt-2">
+                        Поддерживаемые форматы:
+                        <br>• <code class="bg-gray-100 px-1 rounded">ip:port:user:pass</code>
+                        <br>• <code class="bg-gray-100 px-1 rounded">socks5://user:pass@ip:port</code>
+                        <br>• <code class="bg-gray-100 px-1 rounded">ip:port</code> (без авторизации)
+                    </p>
+                </div>
+
+                <div class="flex gap-3">
+                    <button onclick="importProxyList()"
+                        class="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md font-medium transition">
+                        Загрузить
+                    </button>
+                    <button onclick="closeImportProxyModal()"
+                        class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-2 rounded-md font-medium transition">
+                        Отмена
+                    </button>
+                </div>
+
+                <div id="import-status" class="mt-4 hidden">
+                    <div class="p-4 rounded-lg">
+                        <p class="text-sm font-medium" id="import-status-text"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation Buttons -->
+    <div class="flex justify-between">
+        <button id="prev-step-btn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-3 rounded-lg font-medium transition hidden">
+            ← Prev Step
+        </button>
+        <button id="next-step-btn" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-medium transition">
+            Next Step →
+        </button>
+    </div>
+</div>
+
+<!-- Template Modal -->
+<div id="templateModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-center p-6 border-b">
+            <h2 class="text-2xl font-bold text-gray-800" id="modal-title">Создать шаблон</h2>
+            <button id="close-modal-btn" class="text-gray-500 hover:text-gray-700">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+
+        <form id="template-form" class="p-6 space-y-6">
+            <input type="hidden" id="template-id">
+
+            <!-- Template Name -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Название шаблона <span
+                        class="text-red-500">*</span></label>
+                <input type="text" id="template-name" required
+                    class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+            </div>
+
+            <!-- Tabs -->
+            <div class="border-b border-gray-200">
+                <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+                    <button id="profile-tab" type="button" role="tab" aria-selected="true"
+                        class="border-blue-500 text-blue-600 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+                        👤 Профиль
+                    </button>
+                    <button id="comment-tab" type="button" role="tab" aria-selected="false"
+                        class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+                        💬 Комменты
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Profile Tab Panel -->
+            <div id="profile-panel" role="tabpanel" class="space-y-6">
+                <!-- Personal Info Section -->
+                <div class="border border-gray-200 rounded-lg p-4">
+                    <h3 class="font-medium text-gray-800 mb-3">👤 Личные данные</h3>
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Имя</label>
+                                <input type="text" id="template-first-name"
+                                    class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Фамилия</label>
+                                <input type="text" id="template-last-name"
+                                    class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Био</label>
+                            <textarea id="template-bio" rows="3"
+                                class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" readonly></textarea>
+                            <p class="mt-1 text-sm text-gray-500">💡 Bio аккаунта автоматически заполнится ссылкой на личный канал</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Аватар (URL или ID
+                                файла)</label>
+                            <input type="text" id="template-avatar"
+                                class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Channel Settings Section -->
+                <div class="border border-gray-200 rounded-lg p-4">
+                    <h3 class="font-medium text-gray-800 mb-3">📢 Настройки канала</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Название канала</label>
+                            <input type="text" id="template-channel-title"
+                                class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Описание канала</label>
+                            <textarea id="template-channel-description" rows="2"
+                                class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"></textarea>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Шаблон текста для поста</label>
+                            <textarea id="template-post-text-template" rows="3"
+                                class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                placeholder="Шаблон текста для поста в канале"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Comment Policy Tab Panel -->
+            <div id="comment-panel" role="tabpanel" class="space-y-6 hidden">
+                <!-- AI Settings Section -->
+                <div class="border border-gray-200 rounded-lg p-4">
+                    <h3 class="font-medium text-gray-800 mb-3">🤖 AI Персона (Комментарии)</h3>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            System Prompt
+                            <span class="text-xs text-gray-500 font-normal ml-1">(Оставьте пустым для использования
+                                глобального
+                                промпта)</span>
+                        </label>
+                        <textarea id="template-commenting-prompt" rows="4"
+                            class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="Ты — опытный крипто-энтузиаст, который..."></textarea>
+                    </div>
+                </div>
+
+                <!-- Commenting Behavior Section -->
+                <div class="border border-gray-200 rounded-lg p-4">
+                    <h3 class="font-medium text-gray-800 mb-3">🛠 Поведение Комментирования</h3>
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Стиль общения</label>
+                                <input type="text" id="template-style" placeholder="Напр: Дерзкий, Официальный"
+                                    class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Тональность</label>
+                                <input type="text" id="template-tone" placeholder="Напр: Позитивная, Скептичная"
+                                    class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Макс. слов</label>
+                                <input type="number" id="template-max-words" placeholder="50" min="1" max="1000"
+                                    class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Мин. длина поста</label>
+                                <input type="number" id="template-min-post-length" placeholder="0" min="0" max="10000"
+                                    class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Режим фильтрации</label>
+                            <select id="template-filter-mode"
+                                class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                                <option value="none">Нет фильтрации (комментить всё)</option>
+                                <option value="keywords">По ключевым словам (Keywords)</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Ключевые слова
+                                <span class="text-xs text-gray-500 font-normal ml-1">(Через запятую)</span>
+                            </label>
+                            <textarea id="template-filter-keywords" rows="2" placeholder="крипта, биткоин, инвестиции"
+                                class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-4">
+                <button type="button" id="cancel-template-btn"
+                    class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-lg font-medium transition">
+                    Отмена
+                </button>
+                <button type="button" id="submit-template-btn"
+                    class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition">
+                    Сохранить
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="/static/js/pages/wizard.page.js?v=999"></script>

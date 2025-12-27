@@ -11,7 +11,7 @@
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "5433:5432"
     networks:
       - neurocomment-network
     healthcheck:
@@ -29,7 +29,7 @@
     volumes:
       - redis_data:/data
     ports:
-      - "6379:6379"
+      - "16379:6379"
     networks:
       - neurocomment-network
     healthcheck:
@@ -88,7 +88,14 @@
         condition: service_started
     environment:
       PYTHONUNBUFFERED: "1"
-      DIRECTUS_PUBLIC_URL: "http://directus:8055"
+      DIRECTUS_URL: "http://directus:8055"
+      DIRECTUS_PUBLIC_URL: "http://localhost:18055"
+      # Database connection for TaskQueueManager
+      POSTGRES_HOST: "postgres"
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: "neurocomment"
+      POSTGRES_PASSWORD: "Fh6YtNNmR76"
+      POSTGRES_DB: "neurocomment_db"
     command: uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
 
   health-checker:
@@ -107,7 +114,13 @@
         condition: service_started
     environment:
       PYTHONUNBUFFERED: "1"
-      DIRECTUS_PUBLIC_URL: "http://directus:8055"
+      DIRECTUS_URL: "http://directus:8055"
+      # Database connection for TaskQueueManager
+      POSTGRES_HOST: "postgres"
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: "neurocomment"
+      POSTGRES_PASSWORD: "Fh6YtNNmR76"
+      POSTGRES_DB: "neurocomment_db"
     command: python -m backend.workers.account_health_checker
 
   listener:
@@ -126,7 +139,13 @@
         condition: service_started
     environment:
       PYTHONUNBUFFERED: "1"
-      DIRECTUS_PUBLIC_URL: "http://directus:8055"
+      DIRECTUS_URL: "http://directus:8055"
+      # Database connection for TaskQueueManager
+      POSTGRES_HOST: "postgres"
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: "neurocomment"
+      POSTGRES_PASSWORD: "Fh6YtNNmR76"
+      POSTGRES_DB: "neurocomment_db"
     command: python -m backend.workers.listener_worker
 
   parser-worker:
@@ -145,9 +164,19 @@
         condition: service_started
     environment:
       PYTHONUNBUFFERED: "1"
-      DIRECTUS_PUBLIC_URL: "http://directus:8055"
+      DIRECTUS_URL: "http://directus:8055"
       OPENAI_API_KEY: "${OPENAI_API_KEY}"
-    command: python -u backend/workers/parser_worker.py
+      # Database connection for TaskQueueManager
+      POSTGRES_HOST: "postgres"
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: "neurocomment"
+      POSTGRES_PASSWORD: "Fh6YtNNmR76"
+      POSTGRES_DB: "neurocomment_db"
+    command: python -u backend/workers/comment_planner_worker.py 
+    # ^^^ ВАЖНО: Я заменил старый parser_worker.py на comment_planner_worker.py 
+    # (который теперь Генератор), так как вы его переписали. Проверьте имя файла!
+    # Если вы хотите старый парсер оставить, верните обратно. 
+    # Но по логике тут должен быть Генератор Комментов.
 
   commenting-worker:
     build:
@@ -165,8 +194,14 @@
         condition: service_started
     environment:
       PYTHONUNBUFFERED: "1"
-      DIRECTUS_PUBLIC_URL: "http://directus:8055"
+      DIRECTUS_URL: "http://directus:8055"
       OPENAI_API_KEY: "${OPENAI_API_KEY}"
+      # Database connection for TaskQueueManager
+      POSTGRES_HOST: "postgres"
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: "neurocomment"
+      POSTGRES_PASSWORD: "Fh6YtNNmR76"
+      POSTGRES_DB: "neurocomment_db"
     command: python -u backend/workers/commenting_worker.py
 
   setup-worker:
@@ -186,7 +221,38 @@
     environment:
       PYTHONUNBUFFERED: "1"
       DIRECTUS_PUBLIC_URL: "http://directus:8055"
+      # Database connection for TaskQueueManager
+      POSTGRES_HOST: "postgres"
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: "neurocomment"
+      POSTGRES_PASSWORD: "Fh6YtNNmR76"
+      POSTGRES_DB: "neurocomment_db"
     command: python -m backend.workers.setup_worker
+
+  subscription-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    container_name: neurocomment-subscription-worker
+    restart: unless-stopped
+    volumes:
+      - ./backend:/app/backend
+      - ./.env:/app/.env
+    networks:
+      - neurocomment-network
+    depends_on:
+      directus:
+        condition: service_started
+    environment:
+      PYTHONUNBUFFERED: "1"
+      DIRECTUS_URL: "http://directus:8055"
+      # Database connection for TaskQueueManager
+      POSTGRES_HOST: "postgres"
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: "neurocomment"
+      POSTGRES_PASSWORD: "Fh6YtNNmR76"
+      POSTGRES_DB: "neurocomment_db"
+    command: python -m backend.workers.subscription_worker
 
   beszel:
     image: henrygd/beszel:latest

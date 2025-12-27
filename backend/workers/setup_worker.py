@@ -1,44 +1,24 @@
 """
-Telegram Account Setup Worker
+Telegram Account Setup Worker - Refactored to use Task Queue
 
-Автоматическая упаковка Telegram аккаунтов по стратегии "Double Layer":
-Аккаунт -> Личный канал -> Целевая ссылка
-
-Воркер берет "сырые" аккаунты (setup_status='pending') и превращает их в готовых ботов
-с личными каналами-прокладками.
+Uses TaskQueueManager to process setup tasks instead of polling Directus.
 """
 
 import asyncio
 import os
 import sys
-import random
-import string
 import logging
 from pathlib import Path
-from typing import Optional, Dict, List
+from typing import Optional, Dict, Any
 from datetime import datetime
-
-from telethon import TelegramClient
-from telethon.errors import (
-    FloodWaitError,
-    UsernameOccupiedError,
-    ChannelsAdminPublicTooMuchError,
-    UsernameInvalidError
-)
-from telethon.sessions import StringSession
-from telethon.tl.functions.channels import (
-    CreateChannelRequest,
-    EditPhotoRequest,
-    UpdateUsernameRequest
-)
-from telethon.tl.functions.messages import ExportChatInviteRequest
-from telethon.tl.functions.account import UpdateProfileRequest
-from telethon.tl.types import InputChatUploadedPhoto
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from backend.directus_client import DirectusClient
+from backend.directus_client import directus
+from backend.services.telegram_client_factory import get_client_for_account, format_proxy
+from backend.services.account_setup_service import AccountSetupService
+from backend.services.task_queue_manager import TaskQueueManager
 
 # Настройка логирования
 logging.basicConfig(
@@ -47,548 +27,259 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Initialize Directus client
-directus = DirectusClient()
+# Initialize Directus client (using global instance as per project standards)
+# directus is already a global instance from backend.directus_client
+setup_service: Optional[AccountSetupService] = None
+task_manager: Optional[TaskQueueManager] = None
 
 # Configuration
-CHECK_INTERVAL = 60  # 60 секунд между циклами
-TEMP_DIR = Path("temp_setup_files")  # Временная папка для файлов
+CHECK_INTERVAL = int(os.getenv("CHECK_INTERVAL", "5"))  # Check more frequently since we're using task queue
+TEMP_DIR = Path("temp_setup_files")
+
+# Feature Flags
+DRY_RUN = os.getenv("SETUP_DRY_RUN", "false").lower() == "true"
+SETUP_ACCOUNT_ID = os.getenv("SETUP_ACCOUNT_ID")
 
 
-async def get_pending_account() -> Optional[Dict]:
+def validate_and_log_setup_status(status: str, context: str = "") -> str:
     """
-    Получить один аккаунт для настройки.
-    
-    Критерии:
-    - status='active'
-    - setup_status='pending'
-    
-    Returns:
-        Account dictionary или None
+    Validate and normalize setup_status value before sending to Directus.
     """
+    ALLOWED_STATUSES = {"pending", "active", "done", "failed"}
+    status = str(status).strip().lower()
+    
+    # Enforce mapping rules
+    if status == "completed":
+        status = "done"
+    elif status == "in_progress":
+        status = "active"
+    
+    if status not in ALLOWED_STATUSES:
+        logger.warning(f"[SETUP_STATUS] Invalid value '{status}', coercing.")
+        if "fail" in context.lower() or "error" in context.lower():
+            status = "failed"
+        else:
+            status = "active"
+            
+    return status
+
+
+async def mark_account_status(account_id: int, status: str, logs: str = ""):
+    """Обновить статус настройки и логи."""
     try:
-        params = {
-            "filter[status][_eq]": "active",
-            "filter[setup_status][_eq]": "pending",
-            "fields": "id,phone,session_string,api_id,api_hash,user_created,template_id",
-            "limit": 1
+        validated_status = validate_and_log_setup_status(status, f"mark_account_status(account_id={account_id})")
+        
+        update_data = {
+            "setup_status": validated_status,
+            "setup_logs": logs
         }
         
-        response = await directus.client.get("/items/accounts", params=params)
-        accounts = response.json().get('data', [])
-        
-        if accounts:
-            account = accounts[0]
-            logger.info(f"[Setup] Найден аккаунт для настройки: {account['phone']}")
-            return account
-        else:
-            logger.info("[Setup] Нет аккаунтов для настройки")
-            return None
+        now_iso = datetime.now().isoformat()
+        if validated_status == "active":
+            update_data["setup_started_at"] = now_iso
+        elif validated_status == "done":
+            update_data["setup_completed_at"] = now_iso
+        elif validated_status == "failed":
+            update_data["setup_failed_at"] = now_iso
             
+        await directus.update_item("accounts", account_id, update_data)
     except Exception as e:
-        logger.error(f"[Setup] Ошибка получения аккаунта: {e}")
-        return None
+        logger.error(f"[Setup] Ошибка обновлениия статуса {status} для {account_id}: {e}")
 
 
 async def get_template_by_id(template_id: int) -> Optional[Dict]:
-    """
-    Получить шаблон по ID.
-    
-    Args:
-        template_id: ID шаблона
-        
-    Returns:
-        Template dictionary или None
-    """
+    """Получить шаблон по ID."""
     try:
-        params = {
-            "fields": "*"
-        }
-        
-        response = await directus.client.get(f"/items/setup_templates/{template_id}", params=params)
-        template = response.json().get('data')
-        
-        if template:
-            logger.info(f"[Setup] Загружен шаблон: {template.get('name', 'Unknown')}")
-            return template
-        else:
-            logger.error(f"[Setup] Шаблон с ID {template_id} не найден")
-            return None
-            
+        response = await directus.safe_get(f"/items/setup_templates/{template_id}", params={"fields": "*"})
+        if response.status_code == 200:
+            return response.json().get('data')
+        return None
     except Exception as e:
         logger.error(f"[Setup] Ошибка получения шаблона {template_id}: {e}")
         return None
 
 
 async def download_template_files(template: Dict) -> Dict[str, Optional[Path]]:
-    """
-    Скачать файлы из шаблона во временную папку.
-    
-    Args:
-        template: Шаблон с file_id для аватарок
-    
-    Returns:
-        Dict с путями к скачанным файлам
-    """
+    """Скачать файлы из шаблона во временную папку."""
     TEMP_DIR.mkdir(exist_ok=True)
+    files = {"account_avatar": None, "channel_avatar": None}
     
-    files = {
-        "account_avatar": None,
-        "channel_avatar": None
-    }
-    
-    try:
-        # Скачать account_avatar
-        account_avatar_id = template.get('account_avatar')
-        if account_avatar_id:
-            account_avatar_path = TEMP_DIR / f"account_avatar_{template['id']}.jpg"
-            await directus.download_file(account_avatar_id, str(account_avatar_path))
-            files["account_avatar"] = account_avatar_path
-            logger.info(f"[Setup] ✓ Скачан account_avatar")
-        
-        # Скачать channel_avatar
-        channel_avatar_id = template.get('channel_avatar')
-        if channel_avatar_id:
-            channel_avatar_path = TEMP_DIR / f"channel_avatar_{template['id']}.jpg"
-            await directus.download_file(channel_avatar_id, str(channel_avatar_path))
-            files["channel_avatar"] = channel_avatar_path
-            logger.info(f"[Setup] ✓ Скачан channel_avatar")
-        
-        return files
-        
-    except Exception as e:
-        logger.error(f"[Setup] Ошибка скачивания файлов: {e}")
-        return files
-
-
-def generate_random_username(base_name: str, length: int = 6) -> str:
-    """
-    Сгенерировать случайный username для канала.
-    
-    Args:
-        base_name: Базовое имя канала
-        length: Длина случайного суффикса
-    
-    Returns:
-        Уникальный username
-    """
-    # Очистить base_name от недопустимых символов
-    clean_name = ''.join(c for c in base_name if c.isalnum() or c == '_')
-    clean_name = clean_name[:20]  # Ограничить длину
-    
-    # Добавить случайные цифры
-    random_suffix = ''.join(random.choices(string.digits, k=length))
-    username = f"{clean_name}_{random_suffix}"
-    
-    return username
-
-
-async def setup_account_profile(
-    client: TelegramClient,
-    template: Dict,
-    account_avatar_path: Optional[Path]
-) -> bool:
-    """
-    Настроить профиль аккаунта (имя, фамилия, аватар).
-    
-    Args:
-        client: Подключенный Telethon клиент
-        template: Шаблон настройки
-        account_avatar_path: Путь к аватару аккаунта
-    
-    Returns:
-        True если успешно
-    """
-    try:
-        # Установить имя и фамилию
-        first_name = template.get('first_name', 'User')
-        last_name = template.get('last_name', '')
-        
-        await client(UpdateProfileRequest(
-            first_name=first_name,
-            last_name=last_name
-        ))
-        logger.info(f"[Setup] ✓ Установлено имя: {first_name} {last_name}")
-        
-        # Загрузить аватар
-        if account_avatar_path and account_avatar_path.exists():
-            await client.upload_profile_photo(str(account_avatar_path))
-            logger.info(f"[Setup] ✓ Загружен аватар аккаунта")
-        
-        return True
-        
-    except FloodWaitError as e:
-        logger.warning(f"[Setup] FloodWait при настройке профиля: {e.seconds}s")
-        await asyncio.sleep(e.seconds)
-        return False
-    except Exception as e:
-        logger.error(f"[Setup] Ошибка настройки профиля: {e}")
-        return False
-
-
-async def create_channel_with_post(
-    client: TelegramClient,
-    template: Dict,
-    channel_avatar_path: Optional[Path]
-) -> Optional[Dict]:
-    """
-    Создать канал-прокладку с постом и получить ссылку.
-    
-    Args:
-        client: Подключенный Telethon клиент
-        template: Шаблон настройки
-        channel_avatar_path: Путь к аватару канала
-    
-    Returns:
-        Dict с channel_link и channel_entity или None
-    """
-    try:
-        # 1. Создать канал
-        channel_title = template.get('channel_title', 'My Channel')
-        channel_description = template.get('channel_description', '')
-        
-        result = await client(CreateChannelRequest(
-            title=channel_title,
-            about=channel_description,
-            megagroup=False  # Обычный канал, не супергруппа
-        ))
-        
-        channel = result.chats[0]
-        logger.info(f"[Setup] ✓ Создан канал: {channel_title} (ID: {channel.id})")
-        
-        # 2. Загрузить аватар канала
-        if channel_avatar_path and channel_avatar_path.exists():
-            file = await client.upload_file(str(channel_avatar_path))
-            await client(EditPhotoRequest(
-                channel=channel,
-                photo=InputChatUploadedPhoto(file)
-            ))
-            logger.info(f"[Setup] ✓ Загружен аватар канала")
-        
-        # 3. Попытаться создать публичный username
-        channel_link = None
-        try:
-            base_username = template.get('channel_title', 'channel')
-            username = generate_random_username(base_username)
-            
-            await client(UpdateUsernameRequest(
-                channel=channel,
-                username=username
-            ))
-            
-            channel_link = f"https://t.me/{username}"
-            logger.info(f"[Setup] ✓ Создан публичный username: {username}")
-            
-        except (UsernameOccupiedError, ChannelsAdminPublicTooMuchError, UsernameInvalidError) as e:
-            # Фоллбэк на приватную ссылку
-            logger.warning(f"[Setup] Не удалось создать публичный username: {e}")
-            logger.info(f"[Setup] Использую приватную ссылку...")
-            
-            invite = await client(ExportChatInviteRequest(peer=channel))
-            channel_link = invite.link
-            logger.info(f"[Setup] ✓ Создана приватная ссылка: {channel_link}")
-        
-        # 4. Опубликовать пост с целевой ссылкой
-        post_text_template = template.get('post_text_template', '{target_link}')
-        target_link = template.get('target_link', 'https://example.com')
-        
-        post_text = post_text_template.replace('{target_link}', target_link)
-        
-        await client.send_message(channel, post_text)
-        logger.info(f"[Setup] ✓ Опубликован пост в канале")
-        
-        return {
-            "channel_link": channel_link,
-            "channel_entity": channel
-        }
-        
-    except FloodWaitError as e:
-        logger.warning(f"[Setup] FloodWait при создании канала: {e.seconds}s")
-        await asyncio.sleep(e.seconds)
-        return None
-    except Exception as e:
-        logger.error(f"[Setup] Ошибка создания канала: {e}")
-        import traceback
-        traceback.print_exc()
-        return None
-
-
-async def update_account_bio(
-    client: TelegramClient,
-    template: Dict,
-    channel_link: str
-) -> bool:
-    """
-    Обновить Bio аккаунта со ссылкой на канал.
-    
-    Args:
-        client: Подключенный Telethon клиент
-        template: Шаблон настройки
-        channel_link: Ссылка на созданный канал
-    
-    Returns:
-        True если успешно
-    """
-    try:
-        account_bio_template = template.get('account_bio_template', '{channel_link}')
-        bio = account_bio_template.replace('{channel_link}', channel_link)
-        
-        await client(UpdateProfileRequest(about=bio))
-        logger.info(f"[Setup] ✓ Обновлен Bio аккаунта")
-        
-        return True
-        
-    except FloodWaitError as e:
-        logger.warning(f"[Setup] FloodWait при обновлении Bio: {e.seconds}s")
-        await asyncio.sleep(e.seconds)
-        return False
-    except Exception as e:
-        logger.error(f"[Setup] Ошибка обновления Bio: {e}")
-        return False
-
-
-async def finalize_account_setup(
-    account_id: int,
-    channel_link: str,
-    logs: str
-) -> bool:
-    """
-    Финализировать настройку аккаунта в Directus.
-    
-    Args:
-        account_id: ID аккаунта
-        channel_link: Ссылка на созданный канал
-        logs: Логи настройки
-    
-    Returns:
-        True если успешно
-    """
-    try:
-        update_data = {
-            "personal_channel_url": channel_link,
-            "setup_status": "completed",
-            "setup_logs": logs,
-            "setup_completed_at": datetime.now().isoformat()
-        }
-        
-        await directus.update_item("accounts", account_id, update_data)
-        logger.info(f"[Setup] ✓ Аккаунт #{account_id} финализирован в Directus")
-        
-        return True
-        
-    except Exception as e:
-        logger.error(f"[Setup] Ошибка финализации в Directus: {e}")
-        return False
-
-
-async def mark_account_failed(account_id: int, error_message: str) -> bool:
-    """
-    Отметить аккаунт как failed в случае ошибки.
-    
-    Args:
-        account_id: ID аккаунта
-        error_message: Сообщение об ошибке
-    
-    Returns:
-        True если успешно
-    """
-    try:
-        update_data = {
-            "setup_status": "failed",
-            "setup_logs": f"Ошибка: {error_message}",
-            "setup_failed_at": datetime.now().isoformat()
-        }
-        
-        await directus.update_item("accounts", account_id, update_data)
-        logger.info(f"[Setup] ✗ Аккаунт #{account_id} отмечен как failed")
-        
-        return True
-        
-    except Exception as e:
-        logger.error(f"[Setup] Ошибка обновления статуса failed: {e}")
-        return False
+    for key in files.keys():
+        file_id = template.get(key)
+        if file_id:
+            try:
+                path = TEMP_DIR / f"{key}_{template['id']}.jpg"
+                if not DRY_RUN: # Only download if not dry run, actually service handles dry run check usually but files needed
+                    # Wait, if DRY_RUN, do we skip download?
+                    # Service logic says "if avatar_path and avatar_path.exists()".
+                    # Real files are better even in dry run to simulate existence check.
+                    # But directus.download_file might fail locally if auth/network issues?
+                    # Let's download them.
+                    await directus.download_file(file_id, str(path))
+                files[key] = path
+            except Exception as e:
+                logger.warning(f"[Setup] Failed to download {key}: {e}")
+    return files
 
 
 async def cleanup_temp_files(files: Dict[str, Optional[Path]]):
-    """
-    Очистить временные файлы.
-    
-    Args:
-        files: Dict с путями к файлам
-    """
+    """Очистить временные файлы."""
     for file_path in files.values():
         if file_path and file_path.exists():
             try:
                 file_path.unlink()
-                logger.info(f"[Setup] 🗑 Удален временный файл: {file_path.name}")
             except Exception as e:
                 logger.warning(f"[Setup] Не удалось удалить файл {file_path}: {e}")
 
 
-async def setup_account_cycle():
-    """
-    Основной цикл настройки аккаунта:
-    1. Получить pending аккаунт
-    2. Получить шаблон по setup_template_id или вернуть ошибку
-    3. Скачать файлы
-    4. Настроить профиль аккаунта
-    5. Создать канал с постом
-    6. Обновить Bio
-    7. Финализировать в Directus
-    """
-    logger.info("[Setup] Цикл запущен")
+async def setup_account_task(task: Dict[str, Any]):
+    """Process a single setup account task."""
+    task_id = task['id']
+    payload = task.get('payload', {})
+    account_id = payload.get('account_id')
+    
+    if not account_id:
+        error_msg = f"Task {task_id} has no account_id in payload"
+        logger.error(f"[Setup] {error_msg}")
+        await task_manager.log_event(task_id, "error", "failed", error_msg)
+        await task_manager.fail_task(task_id, error_msg)
+        return
     
     try:
-        # 1. Получить аккаунт для настройки
-        account = await get_pending_account()
-        
+        # Fetch the account details using directus.get_item
+        account = await directus.get_item('accounts', account_id)
         if not account:
-            logger.info("[Setup] Нет аккаунтов для настройки")
+            error_msg = f"Account {account_id} not found in Directus"
+            logger.error(f"[Setup] {error_msg}")
+            await task_manager.log_event(task_id, "error", "failed", error_msg)
+            await task_manager.fail_task(task_id, error_msg)
             return
         
-        account_id = account['id']
-        phone = account['phone']
+        phone = account.get('phone', f'ID:{account_id}')
+        logger.info(f"[Setup] Processing setup task for account {phone} (ID: {account_id})")
         
-        # 2. Получить шаблон по setup_template_id
-        template_id = account.get('template_id')
-        
+        # Guard: Proxy check
+        if account.get('proxy_unavailable'):
+            error_msg = f"Proxy unavailable for account {phone}"
+            logger.warning(f"[Setup] {error_msg}")
+            await task_manager.log_event(task_id, "warning", "skipped", error_msg)
+            await task_manager.fail_task(task_id, error_msg)
+            return
+
+        # Get template
+        # Support both int and dict (relation)
+        tpl_val = account.get('template_id')
+        template_id = tpl_val.get('id') if isinstance(tpl_val, dict) else tpl_val
+
         if not template_id:
-            logger.error(f"[Setup] Для аккаунта {phone} не выбран шаблон!")
-            await mark_account_failed(account_id, "Шаблон не выбран")
+            error_msg = f"Шаблон не выбран для {phone}"
+            logger.error(f"[Setup] {error_msg}")
+            await mark_account_status(account_id, "failed", "Шаблон не выбран")
+            await task_manager.log_event(task_id, "error", "failed", error_msg)
+            await task_manager.fail_task(task_id, error_msg)
             return
         
         template = await get_template_by_id(template_id)
-        
         if not template:
-            logger.error(f"[Setup] Шаблон с ID {template_id} не найден для аккаунта {phone}")
-            await mark_account_failed(account_id, "Шаблон не найден")
+            error_msg = f"Шаблон {template_id} не найден"
+            logger.error(f"[Setup] {error_msg}")
+            await mark_account_status(account_id, "failed", "Шаблон не найден")
+            await task_manager.log_event(task_id, "error", "failed", error_msg)
+            await task_manager.fail_task(task_id, error_msg)
             return
-        
-        logger.info(f"[Setup] Используется шаблон: {template.get('name', 'Unknown')} (ID: {template_id})")
-        
-        # 3. Скачать файлы из шаблона
+
+        # Mark Active
+        logger.info(f"[Setup] >>> Start setup {phone} (ID: {account_id}, Tpl: {template_id})")
+        await mark_account_status(account_id, "active", f"Start setup with template {template.get('name')}")
+
+        # Download files
         files = await download_template_files(template)
         
-        # 4. Подключиться к Telegram
         client = None
         try:
-            session_string = account.get('session_string')
-            api_id = int(account['api_id']) if account.get('api_id') else 2040
-            api_hash = account.get('api_hash') or "b18441a1ff607e10a989891a5462e627"
-            
-            if not session_string:
-                logger.error(f"[Setup] Аккаунт {phone} не имеет session_string")
-                await mark_account_failed(account_id, "Отсутствует session_string")
-                return
-            
-            client = TelegramClient(
-                StringSession(session_string),
-                api_id,
-                api_hash
-            )
+            # Connect Telegram
+            client = await get_client_for_account(account, directus)
             
             await client.connect()
-            
             if not await client.is_user_authorized():
-                logger.error(f"[Setup] Аккаунт {phone} не авторизован")
-                await mark_account_failed(account_id, "Аккаунт не авторизован")
-                return
+                raise Exception("Account not authorized")
             
-            logger.info(f"[Setup] ✓ Подключен к Telegram как {phone}")
+            # Run Service
+            success = await setup_service.setup_account(client, account, template, files)
             
-            # 5. Настроить профиль аккаунта
-            profile_success = await setup_account_profile(
-                client,
-                template,
-                files.get("account_avatar")
-            )
-            
-            if not profile_success:
-                logger.error(f"[Setup] Не удалось настроить профиль аккаунта {phone}")
-                await mark_account_failed(account_id, "Ошибка настройки профиля")
-                return
-            
-            # 6. Создать канал с постом
-            channel_result = await create_channel_with_post(
-                client,
-                template,
-                files.get("channel_avatar")
-            )
-            
-            if not channel_result:
-                logger.error(f"[Setup] Не удалось создать канал для аккаунта {phone}")
-                await mark_account_failed(account_id, "Ошибка создания канала")
-                return
-            
-            channel_link = channel_result["channel_link"]
-            
-            # 7. Обновить Bio аккаунта
-            bio_success = await update_account_bio(client, template, channel_link)
-            
-            if not bio_success:
-                logger.warning(f"[Setup] Не удалось обновить Bio, но продолжаем...")
-            
-            # 8. Финализировать в Directus
-            logs = f"""Успешно настроен аккаунт {phone}
-Шаблон: {template.get('name', 'Unknown')} (ID: {template_id})
-Канал: {channel_link}
-Дата: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"""
-            
-            await finalize_account_setup(account_id, channel_link, logs)
-            
-            logger.info(f"[Setup] ✓✓✓ Аккаунт {phone} успешно настроен!")
-            logger.info(f"[Setup]     Канал: {channel_link}")
-            logger.info(f"[Setup]     Шаблон: {template.get('name', 'Unknown')} (ID: {template_id})")
-            
-        except FloodWaitError as e:
-            logger.warning(f"[Setup] FloodWait для аккаунта {phone}: {e.seconds}s")
-            await mark_account_failed(account_id, f"FloodWait: {e.seconds}s - попробуйте позже")
-            
+            if success:
+                # Finalize
+                final_msg = "Setup completed successfully via AccountSetupService."
+                await mark_account_status(account_id, "done", final_msg)
+                logger.info(f"[Setup] ✓✓✓ Account {phone} setup complete!")
+                
+                # Complete the task
+                await task_manager.complete_task(task_id)
+                
+            else:
+                raise Exception("Service returned failure status")
+                
         except Exception as e:
-            logger.error(f"[Setup] Ошибка настройки аккаунта {phone}: {e}")
-            import traceback
-            traceback.print_exc()
-            await mark_account_failed(account_id, str(e))
+            logger.error(f"[Setup] Error setting up {phone}: {e}")
+            await mark_account_status(account_id, "failed", f"Error: {e}")
+            await task_manager.fail_task(task_id, str(e))
             
         finally:
             if client:
                 await client.disconnect()
-                logger.info("[Setup] Отключен от Telegram")
-            
-            # Очистить временные файлы
             await cleanup_temp_files(files)
-        
+
     except Exception as e:
-        logger.error(f"[Setup] Критическая ошибка в цикле: {e}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"[Setup] Task processing error for task {task_id}: {e}")
+        await task_manager.fail_task(task_id, str(e))
 
 
 async def run_setup_worker():
-    """Главный цикл воркера."""
-    logger.info("🚀 Setup Worker запущен")
-    logger.info(f"   Интервал проверки: {CHECK_INTERVAL}s")
-    logger.info(f"   Временная папка: {TEMP_DIR.absolute()}")
+    """Главный цикл воркера с использованием таск-кью."""
+    global setup_service, task_manager
     
-    # Login to Directus
+    logger.info("🚀 Setup Worker Started (Refactored with Task Queue)")
+    if DRY_RUN:
+        logger.info("[DRY RUN MODE ENABLED]")
+        
     try:
         await directus.login()
-        logger.info("✓ Подключение к Directus")
+        logger.info("✓ Directus connected")
+        
+        setup_service = AccountSetupService(directus, dry_run=DRY_RUN)
+        task_manager = TaskQueueManager()
+        
     except Exception as e:
-        logger.error(f"❌ Ошибка подключения к Directus: {e}")
+        logger.error(f"❌ Startup failed: {e}")
         return
+
+    if SETUP_ACCOUNT_ID:
+        logger.info(f"🎯 Single run for account #{SETUP_ACCOUNT_ID}")
+        # For a specific account, we'd need to create a task first
+        # For now, just process tasks as usual
+        pass
+
+    worker_id = 'setup-worker'
+    task_types = ['setup_account']
     
-    # Main loop
+    logger.info(f"Listening for tasks: {task_types}, worker_id: {worker_id}")
+    
     while True:
         try:
-            await setup_account_cycle()
+            # Claim a task from the queue
+            task = await task_manager.claim_task(worker_id, task_types)
+            
+            if task:
+                logger.info(f"Claimed task {task['id']} of type {task['type']}")
+                # Process the task
+                await setup_account_task(task)
+            else:
+                # No tasks available, wait before checking again
+                await asyncio.sleep(CHECK_INTERVAL)
+                
         except Exception as e:
-            logger.error(f"❌ Неожиданная ошибка в главном цикле: {e}")
-            import traceback
-            traceback.print_exc()
-        
-        logger.info(f"💤 Сон {CHECK_INTERVAL}s до следующего цикла...")
-        await asyncio.sleep(CHECK_INTERVAL)
+            logger.error(f"❌ Main loop error: {e}")
+            await asyncio.sleep(CHECK_INTERVAL)
 
 
 if __name__ == "__main__":

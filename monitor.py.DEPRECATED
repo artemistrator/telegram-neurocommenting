@@ -43,7 +43,21 @@ print(f"AI включен: {AI_ENABLED}", flush=True)
 print(f"Trigger слова: {TRIGGER_WORDS}", flush=True)
 print(f"Webhook: {N8N_WEBHOOK}", flush=True)
 
-client = TelegramClient(SESSION, API_ID, API_HASH)
+# Helper to normalize keys if needed (e.g. if config has mismatched keys)
+tgt_conf = {
+    'session': SESSION,
+    'api_id': API_ID,
+    'api_hash': API_HASH
+}
+proxy_conf = config['telegram'].get('proxy')
+
+try:
+    from backend.services.telegram_client_factory import get_client_from_config
+    client = get_client_from_config(tgt_conf, proxy_conf)
+except Exception as e:
+    print(f"Factory initialization error: {e}", flush=True)
+    print("FATAL ERROR: Cannot proceed without proper proxy configuration. Exiting.", flush=True)
+    exit(1)
 
 # Initialize OpenAI client using new v1 syntax
 ai_client = None

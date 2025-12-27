@@ -1,7 +1,7 @@
 <div class="max-w-7xl" data-testid="page-accounts">
     <div class="flex justify-between items-center mb-8">
         <h1 class="text-3xl font-bold text-gray-800">Управление Аккаунтами</h1>
-        <button onclick="openImportModal()"
+        <button data-action="openImportModal"
             class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition">
             📥 Импорт аккаунтов
         </button>
@@ -82,7 +82,7 @@
     <div class="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
         <div class="flex justify-between items-center p-6 border-b">
             <h2 class="text-2xl font-bold text-gray-800">Детали аккаунта</h2>
-            <button onclick="closeAccountDetails()" class="text-gray-500 hover:text-gray-700">
+            <button data-action="close-modal" class="text-gray-500 hover:text-gray-700">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
@@ -107,6 +107,10 @@
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
+                        <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider">Username</h4>
+                        <div id="modal-username" class="mt-1 text-blue-600 font-medium"></div>
+                    </div>
+                    <div>
                         <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider">Setup Status</h4>
                         <div id="modal-setup" class="mt-1"></div>
                     </div>
@@ -122,8 +126,16 @@
             </div>
         </div>
 
-        <div class="p-6 bg-gray-50 rounded-b-lg flex justify-end">
-            <button onclick="closeAccountDetails()"
+        <div class="p-6 bg-gray-50 rounded-b-lg flex justify-end gap-2">
+            <button data-action="runSetup"
+                class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition">
+                ▶ Setup
+            </button>
+            <button data-action="rerunSetup"
+                class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg font-medium transition">
+                ↻ Rerun
+            </button>
+            <button data-action="close-modal"
                 class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-lg font-medium transition">
                 Закрыть
             </button>
@@ -136,7 +148,7 @@
     <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div class="flex justify-between items-center p-6 border-b">
             <h2 class="text-2xl font-bold text-gray-800">Добавить аккаунты</h2>
-            <button onclick="closeImportModal()" class="text-gray-500 hover:text-gray-700">
+            <button data-action="close-modal" class="text-gray-500 hover:text-gray-700">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
@@ -146,11 +158,11 @@
         <!-- Tabs -->
         <div class="border-b border-gray-200">
             <nav class="-mb-px flex px-6" aria-label="Tabs">
-                <button onclick="switchTab('zip')" id="tab-zip"
+                <button data-action="switchTab" data-tab="zip" id="tab-zip"
                     class="border-blue-500 text-blue-600 w-1/2 py-4 px-1 text-center border-b-2 font-medium text-sm">
                     📂 ZIP Архив
                 </button>
-                <button onclick="switchTab('manual')" id="tab-manual"
+                <button data-action="switchTab" data-tab="manual" id="tab-manual"
                     class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 w-1/2 py-4 px-1 text-center border-b-2 font-medium text-sm">
                     ✏️ Ручной ввод
                 </button>
@@ -179,7 +191,7 @@
                 </div>
 
                 <div class="flex gap-3">
-                    <button onclick="importAccounts()"
+                    <button data-action="importAccounts"
                         class="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md font-medium transition">
                         Импорт
                     </button>
@@ -227,7 +239,7 @@
                 </div>
 
                 <div class="flex gap-3 pt-2">
-                    <button onclick="createAccount()"
+                    <button data-action="createAccount"
                         class="flex-1 bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-md font-medium transition">
                         Создать аккаунт
                     </button>
@@ -243,7 +255,7 @@
         </div>
 
         <div class="p-4 bg-gray-50 border-t border-gray-200 flex justify-end">
-            <button onclick="closeImportModal()" class="text-gray-600 hover:text-gray-800 font-medium text-sm">
+            <button data-action="close-modal" class="text-gray-600 hover:text-gray-800 font-medium text-sm">
                 Закрыть
             </button>
         </div>
@@ -255,7 +267,7 @@
     <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
         <div class="flex justify-between items-center p-6 border-b">
             <h2 class="text-2xl font-bold text-gray-800">Настройка аккаунта</h2>
-            <button onclick="closeSetupAccountModal()" class="text-gray-500 hover:text-gray-700">
+            <button data-action="close-modal" class="text-gray-500 hover:text-gray-700">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
@@ -277,11 +289,11 @@
         </div>
 
         <div class="p-6 bg-gray-50 rounded-b-lg flex justify-end gap-3">
-            <button onclick="closeSetupAccountModal()"
+            <button data-action="close-modal"
                 class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-lg font-medium transition">
                 Отмена
             </button>
-            <button onclick="startAccountSetup()" id="start-setup-btn"
+            <button data-action="startAccountSetup" id="start-setup-btn"
                 class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition">
                 Начать настройку
             </button>
@@ -289,732 +301,4 @@
     </div>
 </div>
 
-<script>
-    // Load accounts on page load
-    loadAccounts();
-
-    // Toast notification function
-    function showToast(message, type = 'success') {
-        const toast = document.getElementById('toast');
-        const icon = document.getElementById('toast-icon');
-        const messageEl = document.getElementById('toast-message');
-
-        const icons = {
-            success: '✅',
-            error: '❌',
-            info: 'ℹ️',
-            warning: '⚠️'
-        };
-
-        icon.textContent = icons[type] || icons.info;
-        messageEl.textContent = message;
-
-        toast.classList.remove('hidden');
-
-        setTimeout(() => {
-            toast.classList.add('hidden');
-        }, 3000);
-    }
-
-    // Modal functions
-    function openImportModal() {
-        document.getElementById('importModal').classList.remove('hidden');
-        document.getElementById('importModal').classList.add('flex');
-
-        // Reset and default to ZIP tab
-        switchTab('zip');
-        document.getElementById('zip-file').value = '';
-        document.getElementById('import-status').classList.add('hidden');
-    }
-
-    function closeImportModal() {
-        document.getElementById('importModal').classList.add('hidden');
-        document.getElementById('importModal').classList.remove('flex');
-    }
-
-    function switchTab(tab) {
-        // Update tab styles
-        if (tab === 'zip') {
-            document.getElementById('tab-zip').className = 'border-blue-500 text-blue-600 w-1/2 py-4 px-1 text-center border-b-2 font-medium text-sm';
-            document.getElementById('tab-manual').className = 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 w-1/2 py-4 px-1 text-center border-b-2 font-medium text-sm cursor-pointer';
-            document.getElementById('content-zip').classList.remove('hidden');
-            document.getElementById('content-manual').classList.add('hidden');
-        } else {
-            document.getElementById('tab-zip').className = 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 w-1/2 py-4 px-1 text-center border-b-2 font-medium text-sm cursor-pointer';
-            document.getElementById('tab-manual').className = 'border-blue-500 text-blue-600 w-1/2 py-4 px-1 text-center border-b-2 font-medium text-sm';
-            document.getElementById('content-zip').classList.add('hidden');
-            document.getElementById('content-manual').classList.remove('hidden');
-        }
-    }
-
-    // Import accounts
-    async function importAccounts() {
-        const zipFile = document.getElementById('zip-file').files[0];
-        const autoAssignProxy = document.getElementById('auto-assign-proxy-zip').checked;
-
-        if (!zipFile) {
-            showToast('Выберите ZIP файл', 'error');
-            return;
-        }
-
-        const formData = new FormData();
-        formData.append('file', zipFile);
-        formData.append('auto_assign_proxy', autoAssignProxy);
-
-        const statusDiv = document.getElementById('import-status');
-        const statusText = document.getElementById('import-status-text');
-
-        statusDiv.classList.remove('hidden');
-        statusDiv.querySelector('div').className = 'p-4 rounded-lg bg-blue-50';
-        statusText.className = 'text-sm font-medium text-blue-800';
-        statusText.textContent = 'Импорт аккаунтов...';
-
-        try {
-            const response = await fetch('/api/accounts/import', {
-                method: 'POST',
-                body: formData
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                statusDiv.querySelector('div').className = 'p-4 rounded-lg bg-green-50';
-                statusText.className = 'text-sm font-medium text-green-800';
-
-                let message = `✅ Импортировано: ${data.imported} аккаунтов`;
-                if (autoAssignProxy && data.proxies_assigned) {
-                    message += `\n🌐 Назначено прокси: ${data.proxies_assigned}`;
-                }
-                if (data.errors && data.errors.length > 0) {
-                    message += `\n⚠️ Ошибок: ${data.errors.length}`;
-                    console.log('Import errors:', data.errors);
-                }
-
-                statusText.textContent = message;
-
-                // Reload accounts after 1.5 seconds
-                setTimeout(() => {
-                    closeImportModal();
-                    loadAccounts();
-                }, 1500);
-            } else {
-                statusDiv.querySelector('div').className = 'p-4 rounded-lg bg-red-50';
-                statusText.className = 'text-sm font-medium text-red-800';
-                statusText.textContent = `❌ Ошибка: ${data.detail || data.message}`;
-            }
-        } catch (error) {
-            statusDiv.querySelector('div').className = 'p-4 rounded-lg bg-red-50';
-            statusText.className = 'text-sm font-medium text-red-800';
-            statusText.textContent = `❌ Ошибка: ${error.message}`;
-        }
-    }
-
-    // Manual Account Creation
-    async function createAccount() {
-        const phone = document.getElementById('manual-phone').value;
-        const apiId = document.getElementById('manual-api-id').value;
-        const apiHash = document.getElementById('manual-api-hash').value;
-        const sessionString = document.getElementById('manual-session').value;
-        const autoAssignProxy = document.getElementById('auto-assign-proxy-manual').checked;
-
-        if (!phone || !apiId || !apiHash) {
-            showToast('Заполните обязательные поля', 'error');
-            return;
-        }
-
-        const statusDiv = document.getElementById('import-status');
-        const statusText = document.getElementById('import-status-text');
-
-        statusDiv.classList.remove('hidden');
-        statusDiv.querySelector('div').className = 'p-4 rounded-lg bg-blue-50';
-        statusText.className = 'text-sm font-medium text-blue-800';
-        statusText.textContent = 'Создание аккаунта...';
-
-        try {
-            const response = await fetch('/api/accounts/create', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    phone: phone,
-                    api_id: parseInt(apiId),
-                    api_hash: apiHash,
-                    session_string: sessionString || null,
-                    auto_assign_proxy: autoAssignProxy
-                })
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                statusDiv.querySelector('div').className = 'p-4 rounded-lg bg-green-50';
-                statusText.className = 'text-sm font-medium text-green-800';
-
-                let msg = `✅ Аккаунт ${data.account.phone} создан`;
-                if (data.proxy) {
-                    msg += `\n🌐 Прокси: ${data.proxy.host}`;
-                }
-                statusText.textContent = msg;
-
-                setTimeout(() => {
-                    closeImportModal();
-                    loadAccounts();
-                }, 1500);
-            } else {
-                statusDiv.querySelector('div').className = 'p-4 rounded-lg bg-red-50';
-                statusText.className = 'text-sm font-medium text-red-800';
-                statusText.textContent = `❌ Ошибка: ${data.detail || data.message}`;
-            }
-        } catch (error) {
-            statusDiv.querySelector('div').className = 'p-4 rounded-lg bg-red-50';
-            statusText.className = 'text-sm font-medium text-red-800';
-            statusText.textContent = `❌ Ошибка: ${error.message}`;
-        }
-    }
-
-    // Global variable to store accounts for modal
-    let currentAccountsData = [];
-
-    // Load accounts
-    async function loadAccounts() {
-        try {
-            const response = await fetch('/api/accounts/list');
-            const data = await response.json();
-
-            // Safely get accounts array from response
-            const accounts = data.accounts || data.data || [];
-            currentAccountsData = accounts; // Save for modal usage
-
-            const tbody = document.getElementById('accounts-table');
-            tbody.innerHTML = '';
-
-            if (accounts.length === 0) {
-                tbody.innerHTML = `
-                <tr>
-                    <td colspan="8" class="px-6 py-12 text-center">
-                        <div class="text-gray-400">
-                            <svg class="mx-auto h-12 w-12 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
-                            </svg>
-                            <p class="text-lg font-medium text-gray-900 mb-2">Аккаунты не загружены</p>
-                            <p class="text-sm text-gray-500">Нажмите "Импорт аккаунтов" чтобы начать</p>
-                        </div>
-                    </td>
-                </tr>
-            `;
-            } else {
-                accounts.forEach(account => {
-                    const row = document.createElement('tr');
-                    row.className = 'hover:bg-gray-50';
-                    row.setAttribute('data-account-id', account.id);
-
-                    // Profile display (avatar + phone + name)
-                    const avatarUrl = account.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(account.phone || 'User');
-                    const displayName = account.first_name ? `${account.first_name} ${account.last_name || ''}`.trim() : '';
-
-                    const profileHtml = `
-                    <div class="flex items-center">
-                        <img src="${avatarUrl}" alt="Avatar" class="w-10 h-10 rounded-full mr-3" onerror="this.src='https://ui-avatars.com/api/?name=User'">
-                        <div>
-                            <div class="font-medium text-gray-900">${account.phone || 'N/A'}</div>
-                            ${displayName ? `<div class="text-sm text-gray-500">${displayName}</div>` : ''}
-                        </div>
-                    </div>
-                `;
-
-                    // Role dropdown - Updated with proper options
-                    const isDisabled = account.status === 'banned';
-                    const disabledAttr = isDisabled ? 'disabled' : '';
-                    const roleHtml = `
-                    <select 
-                        onchange="updateAccountRole(${account.id}, this.value)" 
-                        class="rounded border-gray-300 text-sm focus:ring-blue-500 focus:border-blue-500 ${isDisabled ? 'bg-gray-100 cursor-not-allowed' : ''}"
-                        ${disabledAttr}>
-                        <option value="">Не выбрана</option>
-                        <option value="commenter" ${account.work_mode === 'commenter' ? 'selected' : ''}>Commenter</option>
-                        <option value="listener" ${account.work_mode === 'listener' ? 'selected' : ''}>Listener</option>
-                        <option value="reserve" ${account.work_mode === 'reserve' ? 'selected' : ''}>Reserve</option>
-                    </select>
-                `;
-
-                    // Warmup toggle - Fire icon
-                    const warmupActive = account.warmup_mode === true;
-                    const warmupHtml = `
-                    <button 
-                        onclick="toggleWarmupMode(${account.id}, ${warmupActive})"
-                        class="focus:outline-none ${isDisabled ? 'cursor-not-allowed opacity-50' : ''}"
-                        ${isDisabled ? 'disabled' : ''}>
-                        <span class="text-2xl ${warmupActive ? 'text-orange-500' : 'text-gray-400'}">
-                            ${warmupActive ? '🔥' : '🧊'}
-                        </span>
-                    </button>
-                `;
-
-                    // Status badge
-                    let statusBadge = '';
-                    if (account.status === 'active') {
-                        statusBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Active</span>';
-                    } else if (account.status === 'banned') {
-                        statusBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Banned</span>';
-                    } else if (account.status === 'reserve' || account.status === 'reserved') {
-                        statusBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Reserved</span>';
-                    } else {
-                        statusBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">Unknown</span>';
-                    }
-
-                    // Setup status badge with channel link
-                    let setupBadge = '';
-                    if (account.setup_status === 'completed') {
-                        const channelLink = account.personal_channel_url || '#';
-                        setupBadge = `
-                        <div>
-                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">Done</span>
-                            ${account.personal_channel_url ? `<br><a href="${channelLink}" target="_blank" class="text-xs text-blue-600 hover:underline mt-1 inline-block">📢 Канал</a>` : ''}
-                        </div>
-                    `;
-                    } else if (account.setup_status === 'pending') {
-                        setupBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Pending</span>';
-                    } else if (account.setup_status === 'failed') {
-                        setupBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Failed</span>';
-                    } else {
-                        setupBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">Not started</span>';
-                    }
-
-                    // Template display
-                    let templateHtml = '';
-                    if (account.setup_template_id && account.setup_template_id.name) {
-                        templateHtml = `<span class="text-sm text-gray-700">${account.setup_template_id.name}</span>`;
-                    } else {
-                        templateHtml = `<span class="text-sm text-gray-400">Не выбран</span>`;
-                    }
-
-                    // Proxy display
-                    let proxyHtml = '';
-                    if (account.proxy && account.proxy.host) {
-                        proxyHtml = `
-                        <div class="text-sm">
-                            <span class="font-mono text-gray-700">${account.proxy.host}:${account.proxy.port}</span>
-                            <br>
-                            <span class="text-xs text-gray-500">${account.proxy.type ? account.proxy.type.toUpperCase() : 'N/A'}</span>
-                        </div>
-                    `;
-                    } else {
-                        proxyHtml = `
-                        <div class="flex items-center">
-                            <span class="text-sm text-red-600 font-medium mr-2">Нет прокси</span>
-                            <button onclick="assignManualProxy(${account.id})" 
-                                class="text-blue-500 hover:text-blue-700 p-1 rounded hover:bg-blue-50 transition"
-                                title="Назначить прокси"
-                                ${isDisabled ? 'disabled' : ''}>
-                                🔗
-                            </button>
-                        </div>
-                    `;
-                    }
-
-                    // Date display - show date_updated or a fallback
-                    let dateDisplay = 'N/A';
-                    if (account.date_updated) {
-                        // Format date as DD.MM HH:mm
-                        const date = new Date(account.date_updated);
-                        const day = String(date.getDate()).padStart(2, '0');
-                        const month = String(date.getMonth() + 1).padStart(2, '0');
-                        const hours = String(date.getHours()).padStart(2, '0');
-                        const minutes = String(date.getMinutes()).padStart(2, '0');
-                        dateDisplay = `${day}.${month} ${hours}:${minutes}`;
-                    }
-
-                    row.innerHTML = `
-                    <td class="px-6 py-4 whitespace-nowrap">${profileHtml}</td>
-                    <td class="px-6 py-4 whitespace-nowrap">${roleHtml}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-center">${warmupHtml}</td>
-                    <td class="px-6 py-4 whitespace-nowrap">${statusBadge}</td>
-                    <td class="px-6 py-4 whitespace-nowrap">${setupBadge}</td>
-                    <td class="px-6 py-4 whitespace-nowrap">${templateHtml}</td>
-                    <td class="px-6 py-4 whitespace-nowrap">${proxyHtml}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${dateDisplay}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm">
-                        <button onclick="openAccountDetails(${account.id})" 
-                            class="text-gray-600 hover:text-gray-800 font-medium mr-3"
-                            title="Подробнее">
-                            👁️
-                        </button>
-                        <button onclick="checkAccountStatus(${account.id})" 
-                            class="text-blue-600 hover:text-blue-800 font-medium mr-3"
-                            title="Проверить статус">
-                            🔍
-                        </button>
-                        <button onclick="runSetup(${account.id})" 
-                            class="text-green-600 hover:text-green-800 font-medium mr-3"
-                            title="Запустить Setup"
-                            ${account.setup_status === 'completed' ? 'disabled class="text-gray-400 cursor-not-allowed"' : ''}>
-                            ⚙️
-                        </button>
-                        <button onclick="deleteAccount(${account.id})" 
-                            class="text-red-600 hover:text-red-800 font-medium"
-                            title="Удалить">
-                            🗑️
-                        </button>
-                    </td>
-                `;
-
-                    tbody.appendChild(row);
-                });
-            }
-
-            // Update stats - use accounts array
-            const totalAccounts = accounts.length;
-            const activeAccounts = accounts.filter(a => a.status === 'active').length;
-            const setupCompleted = accounts.filter(a => a.setup_status === 'completed').length;
-            const withProxy = accounts.filter(a => a.proxy && a.proxy.host).length;
-            const bannedAccounts = accounts.filter(a => a.status === 'banned').length;
-            const reserveAccounts = accounts.filter(a => a.status === 'reserve' || a.status === 'reserved').length;
-
-            document.getElementById('total-accounts').textContent = totalAccounts;
-            document.getElementById('active-accounts').textContent = activeAccounts;
-            document.getElementById('setup-completed').textContent = setupCompleted;
-            document.getElementById('with-proxy').textContent = withProxy;
-            document.getElementById('banned-accounts').textContent = bannedAccounts;
-            document.getElementById('reserve-accounts').textContent = reserveAccounts;
-
-        } catch (error) {
-            console.error('Error loading accounts:', error);
-            showToast(`Ошибка загрузки аккаунтов: ${error.message}`, 'error');
-        }
-    }
-
-    // New function to update account role
-    async function updateAccountRole(accountId, workMode) {
-        try {
-            const response = await fetch(`/api/accounts/${accountId}`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    work_mode: workMode
-                })
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                showToast('Роль обновлена', 'success');
-                await loadAccounts(); // Refresh the table
-            } else {
-                showToast(`Ошибка: ${data.detail || data.message}`, 'error');
-            }
-        } catch (error) {
-            showToast(`Ошибка: ${error.message}`, 'error');
-        }
-    }
-
-    // New function to toggle warmup mode
-    async function toggleWarmupMode(accountId, currentMode) {
-        try {
-            const newMode = !currentMode;
-            const response = await fetch(`/api/accounts/${accountId}`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    warmup_mode: newMode
-                })
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                showToast(`Режим прогрева ${newMode ? 'включен' : 'выключен'}`, 'success');
-                await loadAccounts(); // Refresh the table
-            } else {
-                showToast(`Ошибка: ${data.detail || data.message}`, 'error');
-            }
-        } catch (error) {
-            showToast(`Ошибка: ${error.message}`, 'error');
-        }
-    }
-
-    // Check account status
-    async function checkAccountStatus(accountId) {
-        showToast('Проверка статуса аккаунта...', 'info');
-
-        try {
-            const response = await fetch(`/api/accounts/${accountId}/check-status`, {
-                method: 'POST'
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                showToast(`Статус: ${data.status}`, 'success');
-                await loadAccounts();
-            } else {
-                showToast(`Ошибка: ${data.detail || data.message}`, 'error');
-            }
-        } catch (error) {
-            showToast(`Ошибка: ${error.message}`, 'error');
-        }
-    }
-
-    // Run setup
-    async function runSetup(accountId) {
-        openSetupAccountModal(accountId);
-    }
-
-    // Account Details Modal Functions
-    function openAccountDetails(accountId) {
-        const account = currentAccountsData.find(a => a.id === accountId);
-        if (!account) return;
-
-        const modal = document.getElementById('accountDetailsModal');
-
-        // Populate fields
-        const avatarUrl = account.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(account.phone || 'User');
-        document.getElementById('modal-avatar').src = avatarUrl;
-
-        const displayName = account.first_name ? `${account.first_name} ${account.last_name || ''}`.trim() : (account.phone || 'Unknown');
-        document.getElementById('modal-name').textContent = displayName;
-        document.getElementById('modal-phone').textContent = account.phone || '-';
-
-        // Show bio or a default message
-        document.getElementById('modal-bio').textContent = account.bio || 'Нет описания';
-
-        // Modal Badges
-        const badgesContainer = document.getElementById('modal-badges');
-        let statusBadge = '';
-        if (account.status === 'active') statusBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Active</span>';
-        else if (account.status === 'banned') statusBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Banned</span>';
-        else if (account.status === 'reserve' || account.status === 'reserved') statusBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Reserved</span>';
-        else statusBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">Unknown</span>';
-
-        // Work mode badge
-        let workModeBadge = '';
-        if (account.work_mode) {
-            let modeLabel = account.work_mode;
-            if (modeLabel === 'commenter') modeLabel = 'Commenter';
-            else if (modeLabel === 'listener') modeLabel = 'Listener';
-            else if (modeLabel === 'reserve') modeLabel = 'Reserve';
-            workModeBadge = `<span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-50 text-blue-600 border border-blue-200">${modeLabel}</span>`;
-        }
-
-        // Warmup mode badge
-        let warmupBadge = '';
-        if (account.warmup_mode === true) {
-            warmupBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-orange-50 text-orange-600 border border-orange-200">Прогрев 🔥</span>';
-        }
-
-        badgesContainer.innerHTML = statusBadge + workModeBadge + warmupBadge;
-
-        // Setup Info
-        const setupContainer = document.getElementById('modal-setup');
-        if (account.setup_status === 'completed') {
-            const link = account.personal_channel_url ? `<a href="${account.personal_channel_url}" target="_blank" class="text-blue-600 hover:underline block mt-1">Перейти в канал</a>` : '';
-            setupContainer.innerHTML = `<span class="text-green-600 font-medium">Completed</span>${link}`;
-        } else {
-            setupContainer.innerHTML = `<span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">${account.setup_status || 'Pending'}</span>`;
-        }
-
-        // Template Info
-        const templateContainer = document.getElementById('modal-template');
-        if (account.setup_template_id && account.setup_template_id.name) {
-            templateContainer.innerHTML = `<span class="text-gray-700">${account.setup_template_id.name}</span>`;
-        } else {
-            templateContainer.innerHTML = `<span class="text-gray-400">Не выбран</span>`;
-        }
-
-        // Proxy Info
-        const proxyContainer = document.getElementById('modal-proxy');
-        if (account.proxy && account.proxy.host) {
-            proxyContainer.innerHTML = `
-                <div class="font-mono text-sm">${account.proxy.host}:${account.proxy.port}</div>
-                <div class="text-xs text-gray-500">${account.proxy.type} | ID: ${account.proxy.id}</div>
-            `;
-        } else {
-            proxyContainer.innerHTML = `
-                <span class="text-red-500">Нет прокси</span>
-                <button onclick="assignManualProxy(${account.id}); closeAccountDetails()" class="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200">Назначить</button>
-            `;
-        }
-
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
-    }
-
-    function closeAccountDetails() {
-        const modal = document.getElementById('accountDetailsModal');
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
-    }
-
-    // Manual Proxy Assignment
-    async function assignManualProxy(accountId) {
-        showToast('Ищу свободный прокси...', 'info');
-        try {
-            const response = await fetch(`/api/accounts/${accountId}/assign-proxy`, {
-                method: 'POST'
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                showToast(`✅ Прокси назначен: ${data.proxy.host}:${data.proxy.port}`, 'success');
-                await loadAccounts();
-            } else {
-                showToast(`❌ Ошибка: ${data.detail || data.message}`, 'error');
-            }
-        } catch (error) {
-            showToast(`❌ Ошибка сети: ${error.message}`, 'error');
-        }
-    }
-
-    // Delete account
-    async function deleteAccount(accountId) {
-        if (!confirm('Удалить аккаунт? Это действие нельзя отменить.')) {
-            return;
-        }
-
-        try {
-            const response = await fetch(`/api/accounts/${accountId}`, {
-                method: 'DELETE'
-            });
-
-            if (response.ok) {
-                showToast('Аккаунт удален', 'success');
-                await loadAccounts();
-            } else {
-                const data = await response.json();
-                showToast(`Ошибка: ${data.detail || data.message}`, 'error');
-            }
-        } catch (error) {
-            showToast(`Ошибка: ${error.message}`, 'error');
-        }
-    }
-
-    // Global variables for setup modal
-    let currentAccountId = null;
-    let currentAccountPhone = null;
-
-    // Load templates for select dropdown
-    async function loadTemplatesForSelect() {
-        try {
-            const response = await fetch('/api/templates/list');
-            const data = await response.json();
-
-            const templates = data.templates || [];
-            const selectElement = document.getElementById('setup-template-select');
-
-            // Clear existing options
-            selectElement.innerHTML = '';
-
-            if (templates.length === 0) {
-                const option = document.createElement('option');
-                option.value = '';
-                option.textContent = 'Нет доступных шаблонов';
-                selectElement.appendChild(option);
-            } else {
-                // Add default option
-                const defaultOption = document.createElement('option');
-                defaultOption.value = '';
-                defaultOption.textContent = 'Выберите шаблон';
-                selectElement.appendChild(defaultOption);
-
-                // Add template options
-                templates.forEach(template => {
-                    const option = document.createElement('option');
-                    option.value = template.id;
-                    option.textContent = template.name;
-                    selectElement.appendChild(option);
-                });
-            }
-        } catch (error) {
-            console.error('Error loading templates:', error);
-            showToast('Ошибка загрузки шаблонов', 'error');
-        }
-    }
-
-    // Open setup account modal
-    async function openSetupAccountModal(accountId) {
-        const account = currentAccountsData.find(a => a.id === accountId);
-        if (!account) {
-            showToast('Аккаунт не найден', 'error');
-            return;
-        }
-
-        currentAccountId = accountId;
-        currentAccountPhone = account.phone || 'Неизвестный номер';
-
-        // Set phone in modal
-        document.getElementById('setup-account-phone').textContent = currentAccountPhone;
-
-        // Load templates
-        await loadTemplatesForSelect();
-
-        // Show modal
-        const modal = document.getElementById('setupAccountModal');
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
-    }
-
-    // Close setup account modal
-    function closeSetupAccountModal() {
-        const modal = document.getElementById('setupAccountModal');
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
-        currentAccountId = null;
-        currentAccountPhone = null;
-    }
-
-    // Start account setup process
-    async function startAccountSetup() {
-        if (!currentAccountId) {
-            showToast('Аккаунт не выбран', 'error');
-            return;
-        }
-
-        const templateSelect = document.getElementById('setup-template-select');
-        const templateId = templateSelect.value;
-
-        if (!templateId) {
-            showToast('Выберите шаблон', 'error');
-            return;
-        }
-
-        // Disable button during request
-        const startBtn = document.getElementById('start-setup-btn');
-        const originalText = startBtn.textContent;
-        startBtn.disabled = true;
-        startBtn.textContent = 'Запуск...';
-
-        try {
-            const response = await fetch(`/api/accounts/${currentAccountId}`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    setup_template_id: parseInt(templateId),
-                    setup_status: 'pending'
-                })
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                showToast('Setup запущен', 'success');
-                closeSetupAccountModal();
-                await loadAccounts();
-            } else {
-                showToast(`Ошибка: ${data.detail || data.message}`, 'error');
-            }
-        } catch (error) {
-            showToast(`Ошибка: ${error.message}`, 'error');
-        } finally {
-            // Re-enable button
-            startBtn.disabled = false;
-            startBtn.textContent = originalText;
-        }
-    }
-</script>
+<script src="/static/js/pages/accounts.page.js?v=999"></script>

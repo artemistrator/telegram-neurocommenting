@@ -232,12 +232,20 @@ async def subscribe_to_channel(account_id: int, channel_url: str) -> tuple[bool,
                 print(f"Error parsing proxy: {e}")
         
         # Create Telegram client
-        client = TelegramClient(
-            account.session_file.replace('.session', ''),
-            int(account.api_id),
-            account.api_hash,
-            proxy=proxy
-        )
+        # Create Telegram client via factory
+        # Adapt SQLModel account to factory config format
+        telegram_conf = {
+            'session': account.session_file.replace('.session', ''),
+            'api_id': int(account.api_id),
+            'api_hash': account.api_hash
+        }
+        
+        try:
+            from backend.services.telegram_client_factory import get_client_from_config
+            client = get_client_from_config(telegram_conf, proxy_data if proxy else None)
+        except Exception as e:
+            print(f"Factory error for account {account_id}: {e}")
+            return False, f"Factory error: {str(e)}"
         
         await client.connect()
         

@@ -177,11 +177,13 @@ async def get_search_account() -> Optional[Dict]:
         params = {
             "filter[status][_eq]": "active",
             "filter[work_mode][_in]": "listener,commenter",
+            "filter[proxy_unavailable][_neq]": "true",
+            "fields": "id,phone,session_string,api_id,api_hash,proxy_unavailable,proxy_id.id,proxy_id.host,proxy_id.port,proxy_id.type,proxy_id.username,proxy_id.password,proxy_id.status,proxy_id.assigned_to",
             "sort": "-work_mode",
             "limit": 1
         }
         
-        response = await directus.client.get("/items/accounts", params=params)
+        response = await directus.safe_get("/items/accounts", params=params)
         data = response.json().get('data', [])
         
         if data:
@@ -210,14 +212,31 @@ async def search_telegram_real(keyword: str, min_subscribers: int) -> List[Dict]
     if not account:
         return []
 
+    if account.get('proxy_unavailable'):
+        logger.warning(f"[Search Parser] SKIP account {account.get('phone')}: Proxy unavailable")
+        return []
+
     logger.info(f"[Search Parser] Используем аккаунт {account.get('phone')} для поиска '{keyword}'")
 
     try:
-        client = TelegramClient(
-            StringSession(account['session_string']),
-            int(account['api_id']),
-            account['api_hash']
-        )
+        # Create client via factory (with mandatory proxy)
+        try:
+            from backend.services.telegram_client_factory import get_client_for_account, format_proxy
+            
+            client = await get_client_for_account(account, directus)
+            
+            # Safe logging before connect (no credentials)
+            proxy = account.get('proxy_id')
+            if proxy:
+                logger.info(f"[TG] connect account_id={account['id']} phone={account['phone']} via {format_proxy(proxy)}")
+            else:
+                logger.info(f"[TG] connect account_id={account['id']} phone={account['phone']} - no proxy info")
+                
+        except (ValueError, RuntimeError) as e:
+            # Factory error: missing proxy, invalid proxy status, etc.
+            logger.error(f"[Search Parser] Cannot create Telegram client for account {account['id']}: {e}")
+            logger.info("[Search Parser] Skipping search due to proxy error")
+            return []
         
         await client.connect()
         
@@ -340,7 +359,7 @@ async def channel_exists(channel_url: str) -> bool:
             "fields": "id"
         }
         
-        response = await directus.client.get("/items/found_channels", params=params)
+        response = await directus.safe_get("/items/found_channels", params=params)
         data = response.json().get('data', [])
         
         return len(data) > 0
@@ -512,7 +531,7 @@ async def get_active_keywords() -> List[Dict]:
             "limit": -1
         }
         
-        response = await directus.client.get("/items/search_keywords", params=params)
+        response = await directus.safe_get("/items/search_keywords", params=params)
         keywords = response.json().get('data', [])
         
         logger.info(f"[Search Parser] Найдено {len(keywords)} активных keywords")

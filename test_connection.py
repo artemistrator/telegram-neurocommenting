@@ -1,28 +1,26 @@
 import asyncio
-from backend.directus_client import directus
+import sys
+import os
+
+# Добавляем текущую папку в путь, чтобы видеть пакет backend
+sys.path.append(os.getcwd())
+
+from backend.database import get_db_connection
 
 async def main():
-    print("Connecting to Directus...")
-    await directus.login()
-    
-    # Пробуем создать тестовый аккаунт
+    print("🚀 Тест подключения...")
     try:
-        new_acc = await directus.create_account({
-            "phone": "+79990001122",
-            "status": "active",
-            "work_mode": "listener"
-        })
-        print(f"Created account: {new_acc['id']}")
-        
-        # Пробуем прочитать
-        accounts = await directus.get_accounts()
-        print(f"Total accounts found: {len(accounts)}")
-        print(accounts)
-        
+        async with get_db_connection() as conn:
+            print("✅ ПОДКЛЮЧЕНИЕ ЕСТЬ!")
+            res = await conn.fetchval("SELECT 'Postgres is alive!'")
+            print(f"💬 Ответ базы: {res}")
+            
+            # Проверим таблицу task_queue
+            count = await conn.fetchval("SELECT count(*) FROM task_queue")
+            print(f"tasks в очереди: {count}")
+            
     except Exception as e:
-        print(f"Error: {e}")
-    
-    await directus.close()
+        print(f"💀 Всё плохо: {e}")
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -1,0 +1,205 @@
+I need to implement a full-featured Analytics Dashboard in pages/dashboard.html for my system.
+
+The goal is to visualize metrics from my PostgreSQL database (Directus collections) using FastAPI backend and Chart.js frontend.
+
+
+
+1. Backend: Dashboard Router
+
+Create or update backend/routers/dashboard.py.
+
+It should connect directly to the database (using database.py connection) to execute optimized SQL queries. Do NOT use Directus API for aggregation, use SQL GROUP BY.
+
+
+
+Implement these 3 endpoints:
+
+
+
+A) GET /api/dashboard/stats
+
+Returns current counters (JSON):
+
+
+
+Accounts: Total, Active (status='active'), Banned (status='banned'), In Setup (setup_status!='completed').
+
+
+
+Proxies: Total, Alive (status='active'), Dead (status='dead'), Free (assigned_to IS NULL).
+
+
+
+Queue Health:
+
+
+
+Pending Tasks (task_queue where status='pending')
+
+
+
+Failed Tasks (task_queue where status='failed')
+
+
+
+Pending Subs (subscription_queue where status='pending')
+
+
+
+Pending Comments (comment_queue where status='pending')
+
+
+
+B) GET /api/dashboard/charts?days=30
+
+Returns timeseries data for charts.
+
+Use generate_series or python-side filling to ensure NO missing dates (fill with 0).
+
+
+
+Daily Activity:
+
+
+
+comments: Count from comment_queue where status='posted' group by posted_at::date.
+
+
+
+subscriptions: Count from subscription_queue where status='subscribed' group by subscribed_at::date.
+
+
+
+posts_found: Count from found_posts group by found_at::date.
+
+
+
+System Health:
+
+
+
+errors: Count from task_events where level='error' group by date_created::date.
+
+
+
+C) GET /api/dashboard/recent
+
+Returns lists of recent events (limit 10 each):
+
+
+
+recent_comments: from comment_queue (join accounts to get phone/username).
+
+
+
+recent_subs: from subscription_queue (join found_channels to get title).
+
+
+
+recent_errors: from task_events (level='error' or 'warning').
+
+
+
+2. Frontend: Dashboard Page
+
+Update pages/dashboard.html:
+
+
+
+Layout: Use Tailwind CSS grid (4 columns for Stats Cards, 2 columns for Charts, 1-2 columns for Tables).
+
+
+
+Library: Include Chart.js via CDN: <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>.
+
+
+
+UI Components:
+
+
+
+Stats Cards: Stylish cards with Icons (use emoji or SVG), Label, Big Number, and small trend indicator (optional).
+
+
+
+Charts:
+
+
+
+Main Chart (Line): "Activity" (Comments vs Subs).
+
+
+
+Secondary Chart (Bar): "Parsing Volume" (Found Posts/Channels).
+
+
+
+Tables: "Recent Activity" tables with status badges.
+
+
+
+3. Frontend Logic
+
+Create static/js/pages/dashboard.page.js:
+
+
+
+Class DashboardController.
+
+
+
+init(): Fetch data from all 3 endpoints.
+
+
+
+renderStats(data): Update DOM elements by ID.
+
+
+
+renderCharts(data): Initialize Chart.js instances. Store chart instances to update data on refresh (do not destroy/recreate canvas).
+
+
+
+autoRefresh(): Set interval for 30s.
+
+
+
+Constraints:
+
+
+
+Use existing static/js/api/http.js for requests.
+
+
+
+Handle nulls/zeros gracefully.
+
+
+
+Format dates to 'DD.MM' for chart labels.
+
+
+
+Рекомендация по SQL
+
+Поскольку у вас PostgreSQL, для группировки по дням Cursor должен использовать конструкцию вроде:
+
+
+
+sql
+
+SELECT
+
+  date_trunc('day', posted_at) as day,
+
+  COUNT(*) as count
+
+FROM comment_queue
+
+WHERE posted_at >= NOW() - INTERVAL '30 days'
+
+GROUP BY 1
+
+ORDER BY 1;
+
+Это самый эффективный способ получить данные для графиков.
