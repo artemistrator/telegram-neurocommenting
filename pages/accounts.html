@@ -2,8 +2,12 @@
     <div class="flex justify-between items-center mb-8">
         <h1 class="text-3xl font-bold text-gray-800">Управление Аккаунтами</h1>
         <button data-action="openImportModal"
-            class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition">
-            📥 Импорт аккаунтов
+            class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+            Импорт аккаунтов
         </button>
     </div>
 
@@ -35,37 +39,9 @@
         </div>
     </div>
 
-    <!-- Accounts Table -->
-    <div class="bg-white rounded-lg shadow-md overflow-hidden">
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200" data-testid="accounts-table">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Профиль</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Роль</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Прогрев</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Статус</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Setup</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Шаблон</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Прокси</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Проверка</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Действия</th>
-                    </tr>
-                </thead>
-                <tbody id="accounts-table" class="bg-white divide-y divide-gray-200">
-                    <!-- Accounts will be loaded here -->
-                </tbody>
-            </table>
-        </div>
+    <!-- Accounts Grid -->
+    <div id="accounts-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6" data-testid="accounts-grid">
+        <!-- Account cards will be rendered here by JavaScript -->
     </div>
 </div>
 
@@ -128,12 +104,20 @@
 
         <div class="p-6 bg-gray-50 rounded-b-lg flex justify-end gap-2">
             <button data-action="runSetup"
-                class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition">
-                ▶ Setup
+                class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                </svg>
+                Setup
             </button>
             <button data-action="rerunSetup"
-                class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg font-medium transition">
-                ↻ Rerun
+                class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg font-medium transition flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Rerun
             </button>
             <button data-action="close-modal"
                 class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-lg font-medium transition">
@@ -159,12 +143,20 @@
         <div class="border-b border-gray-200">
             <nav class="-mb-px flex px-6" aria-label="Tabs">
                 <button data-action="switchTab" data-tab="zip" id="tab-zip"
-                    class="border-blue-500 text-blue-600 w-1/2 py-4 px-1 text-center border-b-2 font-medium text-sm">
-                    📂 ZIP Архив
+                    class="border-blue-500 text-blue-600 w-1/2 py-4 px-1 text-center border-b-2 font-medium text-sm flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                    </svg>
+                    ZIP Архив
                 </button>
                 <button data-action="switchTab" data-tab="manual" id="tab-manual"
-                    class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 w-1/2 py-4 px-1 text-center border-b-2 font-medium text-sm">
-                    ✏️ Ручной ввод
+                    class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 w-1/2 py-4 px-1 text-center border-b-2 font-medium text-sm flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    Ручной ввод
                 </button>
             </nav>
         </div>
@@ -184,8 +176,12 @@
                     <label class="flex items-center cursor-pointer">
                         <input type="checkbox" id="auto-assign-proxy-zip" checked
                             class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-                        <span class="ml-3 text-sm font-medium text-gray-700">
-                            🤖 Автоматически назначить свободные прокси
+                        <span class="ml-3 text-sm font-medium text-gray-700 flex items-center gap-2">
+                            <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            </svg>
+                            Автоматически назначить свободные прокси
                         </span>
                     </label>
                 </div>
@@ -232,8 +228,12 @@
                     <label class="flex items-center cursor-pointer">
                         <input type="checkbox" id="auto-assign-proxy-manual" checked
                             class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-                        <span class="ml-3 text-sm font-medium text-gray-700">
-                            🤖 Автоматически назначить свободный прокси
+                        <span class="ml-3 text-sm font-medium text-gray-700 flex items-center gap-2">
+                            <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            </svg>
+                            Автоматически назначить свободный прокси
                         </span>
                     </label>
                 </div>

@@ -58,7 +58,7 @@ export function mapFormDataToTemplate(formData) {
     const profileConfig = {
         first_name: formData.first_name,
         last_name: formData.last_name,
-        bio: formData.bio,
+        bio: null, // Bio is now automatically set to channel link, so we don't save it in the form
         avatar: formData.avatar,
         channel_title: formData.channel_title,
         channel_description: formData.channel_description,
@@ -82,7 +82,7 @@ export function mapFormDataToTemplate(formData) {
         // Old fields for backward compatibility
         first_name: formData.first_name,
         last_name: formData.last_name,
-        bio: formData.bio,
+        bio: null, // Bio is now automatically set to channel link, so we don't save it in the form
         avatar: formData.avatar,
         channel_title: formData.channel_title,
         channel_description: formData.channel_description,

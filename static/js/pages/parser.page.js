@@ -1,5 +1,23 @@
 window.App = window.App || { pages: {} };
 
+function getCheckCircleIcon() {
+    return `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 mr-1 inline">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>`;
+}
+
+function getXCircleIcon() {
+    return `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 mr-1 inline">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>`;
+}
+
+function getClockIcon() {
+    return `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 mr-1 inline animate-spin">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>`;
+}
+
 window.App.pages.parser = {
     lastSource: 'search_parser',  // По умолчанию поиск
     
@@ -12,9 +30,6 @@ console.log('✅ Parser Page Init START');
         
         // 2. Привязать события к кнопкам
         this.bindEvents();
-        
-        // 3. Добавить секцию ручного ввода
-        this.setupManualInput();
         
         console.log('✅ Parser Page Init DONE');
     } catch (err) {
@@ -30,55 +45,67 @@ async loadListeners() {
         const accounts = await response.json();
         console.log('Loaded listeners:', accounts);
         
-        // Создать dropdown если его нет
-        let select = document.getElementById('listener-select');
+        // Check if there are any listener accounts
+        // The API returns accounts with id, phone, name, and is_listener fields
+        // is_listener is true if the account's work_mode is 'listener'
+        const listeners = accounts.filter(acc => acc.is_listener);
         
-        if (!select) {
-            // Найти контейнер формы поиска
-            const searchForm = document.querySelector('.bg-white.rounded-lg.shadow-md');
-            if (!searchForm) return;
-            
-            // Создать label + select
-            const container = document.createElement('div');
-            container.className = 'mb-4';
-            container.innerHTML = `
-                <label class="block text-sm font-medium text-gray-700 mb-1">
-                    Listener аккаунт (для парсинга)
-                </label>
-                <select id="listener-select" 
-                    class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="">Выберите listener аккаунт</option>
-                </select>
-            `;
-            
-            // Вставить в начало формы
-            searchForm.insertBefore(container, searchForm.firstChild);
-            select = document.getElementById('listener-select');
-        }
+        console.log('All accounts:', accounts); // Debug: see all accounts
+        console.log('Account structure:', accounts.length > 0 ? accounts[0] : 'No accounts'); // Debug: see account structure
         
-        // Заполнить options
-        select.innerHTML = '<option value="">Выберите listener аккаунт</option>';
-        accounts.forEach(acc => {
-            const option = document.createElement('option');
-            option.value = acc.id;
-            option.textContent = `${acc.name} (${acc.phone})`;
-            if (acc.is_listener) {
-                option.selected = true;
-                console.log('Current listener:', acc.phone);
-            }
-            select.appendChild(option);
-        });
+        // Use the checkListenerAccounts function to handle filtering and UI updates
+        await this.checkListenerAccounts(accounts);
         
-        // Привязать событие изменения
-        select.onchange = async (e) => {
-            if (e.target.value) {
-                await this.setListener(parseInt(e.target.value));
-            }
-        };
+        // Filtering and UI updates are now handled in checkListenerAccounts function
+        // This block is now redundant and will be removed
         
     } catch (err) {
         console.error('Error loading listeners:', err);
         showToast('Ошибка загрузки аккаунтов', 'error');
+    }
+},
+
+populateListenerDropdown(listeners) {
+    const select = document.getElementById('listener-account');
+    if (!select) return;
+    
+    // Clear existing options except the first one
+    select.innerHTML = '<option value="">Выберите listener аккаунт</option>';
+    
+    listeners.forEach(acc => {
+        const option = document.createElement('option');
+        option.value = acc.id;
+        // Use phone number in the display, fallback to name or id if no phone
+        option.textContent = acc.phone || acc.name || acc.id;
+        if (acc.is_listener) {
+            option.selected = true;
+            console.log('Current listener:', acc.phone);
+        }
+        select.appendChild(option);
+    });
+    
+    // Enable search button if listener is selected
+    select.onchange = (e) => {
+        const searchBtn = document.getElementById('search-btn');
+        searchBtn.disabled = !e.target.value;
+    };
+},
+
+async checkListenerAccounts(accounts) {
+    console.log('All accounts:', accounts); // Debug: see all accounts
+    
+    const listeners = accounts.filter(acc =>
+        acc.is_listener ||
+        (acc.work_mode && acc.work_mode.toLowerCase() === 'listener')
+    );
+    console.log('Filtered listeners:', listeners); // Debug: see filtered results
+    
+    if (listeners.length === 0) {
+        document.getElementById('no-listener-warning').classList.remove('hidden');
+        document.getElementById('search-btn').disabled = true;
+    } else {
+        document.getElementById('no-listener-warning').classList.add('hidden');
+        this.populateListenerDropdown(listeners);
     }
 },
 
@@ -126,6 +153,55 @@ bindEvents() {
             this.updateAddButton();
         };
     }
+    
+    // Manual input button
+    const addManualBtn = document.getElementById('add-manual-btn');
+    if (addManualBtn) {
+        addManualBtn.onclick = () => this.validateAndAddChannels();
+    }
+},
+
+validateAndAddChannels() {
+    const textarea = document.getElementById('manual-channels');
+    const lines = textarea.value.split('\n').filter(line => line.trim());
+    
+    const validChannels = [];
+    const invalidLines = [];
+    
+    lines.forEach((line, index) => {
+        const trimmed = line.trim();
+        
+        // Valid formats:
+        // - https://t.me/channel_name
+        // - @channel_name
+        // - t.me/channel_name
+        
+        const regex = /^(?:https?:\/\/)?(?:www\.)?t\.me\/[\w\d_]+$|^@[\w\d_]+$/i;
+        
+        if (regex.test(trimmed)) {
+            validChannels.push(trimmed);
+        } else {
+            invalidLines.push(`Строка ${index + 1}: "${trimmed}"`);
+        }
+    });
+    
+    // Remove duplicates
+    const uniqueChannels = [...new Set(validChannels)];
+    
+    if (invalidLines.length > 0) {
+        showToast('error', `Неверный формат:\n${invalidLines.join('\n')}`);
+        return;
+    }
+    
+    if (uniqueChannels.length === 0) {
+        showToast('error', 'Не найдено валидных каналов');
+        return;
+    }
+    
+    // Send to backend
+    this.addManualChannels(uniqueChannels);
+    showToast('success', `Добавлено каналов: ${uniqueChannels.length}`);
+    textarea.value = ''; // Clear textarea
 },
 
 async searchChannels() {
@@ -176,6 +252,48 @@ async searchChannels() {
     }
 },
 
+async addManualChannels(urls) {
+    if (!urls.length) {
+        showToast('Введите хотя бы одну ссылку', 'error');
+        return;
+    }
+    
+    console.log('[Parser] Manual add URLs:', urls);  // DEBUG
+    
+    const loading = document.getElementById('table-loading');
+    loading.classList.remove('hidden');
+    
+    try {
+        const response = await fetch('/api/parser/add-manual-channels', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ urls: urls })  // ← ПРАВИЛЬНЫЙ ФОРМАТ
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Failed to resolve channels');
+        }
+        
+        const data = await response.json();
+        
+        if (!data.channels || data.channels.length === 0) {
+            showToast('Не удалось резолвить каналы', 'error');
+            return;
+        }
+        
+        this.lastSource = 'manual';  // ← Запомнить источник
+        this.displayResults(data.channels);
+        showToast(`Резолвлено ${data.channels.length} каналов`, 'success');
+        
+    } catch (err) {
+        console.error('Manual channels error:', err);
+        showToast('Ошибка: ' + err.message, 'error');
+    } finally {
+        loading.classList.add('hidden');
+    }
+},
+
 displayResults(channels) {
     const tbody = document.getElementById('results-table');
     const noResults = document.getElementById('no-results');
@@ -194,7 +312,15 @@ displayResults(channels) {
     
     channels.forEach(ch => {
         const tr = document.createElement('tr');
-        const commentsIcon = ch.has_comments ? '💬 Да' : '🚫 Нет';
+        
+        // Update comments display based on has_comments field
+        let commentsDisplay = `<span class="text-gray-500 flex items-center">${getClockIcon()} Проверяется...</span>`;
+        if (ch.has_comments === true) {
+            commentsDisplay = `<span class="text-green-600 flex items-center">${getCheckCircleIcon()} Открыты</span>`;
+        } else if (ch.has_comments === false) {
+            commentsDisplay = `<span class="text-red-600 flex items-center">${getXCircleIcon()} Закрыты</span>`;
+        }
+        
         const url = ch.url || `https://t.me/${ch.username || ''}`;
         
         tr.innerHTML = `
@@ -206,7 +332,7 @@ displayResults(channels) {
             </td>
             <td class="px-6 py-4 font-medium text-gray-900">${ch.title}</td>
             <td class="px-6 py-4 text-gray-500">${(ch.subscribers || 0).toLocaleString()}</td>
-            <td class="px-6 py-4 text-gray-500">${commentsIcon}</td>
+            <td class="px-6 py-4 text-gray-500">${commentsDisplay}</td>
             <td class="px-6 py-4 text-gray-500"><a href="${url}" target="_blank" class="text-blue-600 hover:underline">${url}</a></td>
         `;
         tbody.appendChild(tr);
@@ -231,7 +357,7 @@ async addToMonitoring() {
             channel_id: parseInt(cb.value),
             title: cells[1].textContent,
             subscribers: parseInt(cells[2].textContent.replace(/\D/g, '')) || 0,
-            has_comments: cells[3].textContent.includes('💬'), // ← НОВОЕ
+            has_comments: cells[3].innerHTML.includes('✅ Открыты'), // ← Updated to use has_comments field
             url: `https://t.me/${cb.dataset.username || ''}`
         });
     });
@@ -273,82 +399,7 @@ async addToMonitoring() {
     }
 },
 
-setupManualInput() {
-    // ПРОВЕРКА: если секция уже существует — не создавать повторно
-    if (document.getElementById('manual-input-section')) {
-        console.log('[Parser] Manual input section already exists, skipping');
-        return;
-    }
 
-    const searchForm = document.querySelector('.bg-white.rounded-lg.shadow-md');
-    if (!searchForm) return;
-
-    const manualSection = document.createElement('div');
-    manualSection.id = 'manual-input-section';  // ← Добавить ID для проверки
-    manualSection.className = 'mt-6 pt-6 border-t border-gray-200';
-    manualSection.innerHTML = `
-        <h3 class="text-lg font-semibold mb-3 text-gray-700">Или добавить вручную</h3>
-        <textarea id="manual-urls" rows="3" 
-            placeholder="https://t.me/pythonru&#10;@channel_name"
-            class="w-full p-2 border rounded-md"></textarea>
-        <button id="add-manual-btn" 
-            class="mt-2 bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-md font-medium transition">
-            ➕ Добавить
-        </button>
-    `;
-
-    searchForm.appendChild(manualSection);
-    
-    document.getElementById('add-manual-btn').onclick = () => this.addManualChannels();
-},
-
-async addManualChannels() {
-    const textarea = document.getElementById('manual-urls');
-    const urls = textarea.value.split('\n')
-        .map(u => u.trim())
-        .filter(u => u.length > 0);
-    
-    if (!urls.length) {
-        showToast('Введите хотя бы одну ссылку', 'error');
-        return;
-    }
-    
-    console.log('[Parser] Manual add URLs:', urls);  // DEBUG
-    
-    const loading = document.getElementById('table-loading');
-    loading.classList.remove('hidden');
-    
-    try {
-        const response = await fetch('/api/parser/add-manual-channels', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ urls: urls })  // ← ПРАВИЛЬНЫЙ ФОРМАТ
-        });
-        
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.detail || 'Failed to resolve channels');
-        }
-        
-        const data = await response.json();
-        
-        if (!data.channels || data.channels.length === 0) {
-            showToast('Не удалось резолвить каналы', 'error');
-            return;
-        }
-        
-        this.lastSource = 'manual';  // ← Запомнить источник
-        this.displayResults(data.channels);
-        showToast(`Резолвлено ${data.channels.length} каналов`, 'success');
-        textarea.value = '';
-        
-    } catch (err) {
-        console.error('Manual channels error:', err);
-        showToast('Ошибка: ' + err.message, 'error');
-    } finally {
-        loading.classList.add('hidden');
-    }
-},
 
 cleanup() {
     console.log('Parser Page: Cleanup');

@@ -1,3 +1,9 @@
+/**
+ * DEPRECATED: This module is no longer used in the main application flow.
+ * Kept for backwards compatibility. May be removed in future versions.
+ * Date: 2025-12-28
+ */
+
 window.App = window.App || {};
 window.App.pages = window.App.pages || {};
 

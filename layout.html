@@ -38,6 +38,16 @@
             min-height: 100vh;
         }
 
+        /* Account Cards */
+        .account-card {
+            transition: all 0.2s ease;
+        }
+
+        .account-card:hover {
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
         /* Mobile responsive */
         @media (max-width: 768px) {
             .sidebar {
@@ -84,50 +94,64 @@
         <nav class="flex-1 p-4">
             <a href="#" class="menu-item flex items-center px-4 py-3 rounded-lg mb-2 text-white no-underline"
                 data-page="home" data-testid="nav-home">
-                <span class="text-xl mr-3">🏠</span>
+                <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5a2 2 0 012-2h4a2 2 0 012 2v6H8V5z"></path>
+                </svg>
                 <span>Главная</span>
             </a>
             <a href="#" class="menu-item flex items-center px-4 py-3 rounded-lg mb-2 text-white no-underline"
-                data-page="accounts" data-testid="nav-accounts">
-                <span class="text-xl mr-3">👤</span>
-                <span>Аккаунты</span>
-            </a>
-            <a href="#" class="menu-item flex items-center px-4 py-3 rounded-lg mb-2 text-white no-underline"
-                data-page="proxies" data-testid="nav-proxies">
-                <span class="text-xl mr-3">🌐</span>
-                <span>Прокси</span>
-            </a>
-            <a href="#" class="menu-item flex items-center px-4 py-3 rounded-lg mb-2 text-white no-underline"
-                data-page="subscriber" data-testid="nav-autosubscribe">
-                <span class="text-xl mr-3">🚀</span>
-                <span>Автоподписка</span>
-            </a>
-            <a href="#" class="menu-item flex items-center px-4 py-3 rounded-lg mb-2 text-white no-underline"
-                data-page="parser" data-testid="nav-parser">
-                <span class="text-xl mr-3">🔍</span>
-                <span>Парсинг</span>
-            </a>
-            <a href="#" class="menu-item flex items-center px-4 py-3 rounded-lg mb-2 text-white no-underline"
                 data-page="dashboard" data-testid="nav-dashboard">
-                <span class="text-xl mr-3">📊</span>
+                <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                </svg>
                 <span>Дашборд</span>
             </a>
             <a href="#" class="menu-item flex items-center px-4 py-3 rounded-lg mb-2 text-white no-underline"
-                data-page="settings" data-testid="nav-settings">
-                <span class="text-xl mr-3">⚙️</span>
-                <span>Настройки</span>
+                data-page="proxies" data-testid="nav-proxies">
+                <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 01-2 2v4a2 2 0 012 2h14a2 2 0 012-2v-4a2 2 0 01-2-2"></path>
+                </svg>
+                <span>Прокси</span>
+            </a>
+            <a href="#" class="menu-item flex items-center px-4 py-3 rounded-lg mb-2 text-white no-underline"
+                data-page="accounts" data-testid="nav-accounts">
+                <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+                </svg>
+                <span>Аккаунты</span>
             </a>
             <a href="#" class="menu-item flex items-center px-4 py-3 rounded-lg mb-2 text-white no-underline"
                 data-page="templates" data-testid="nav-templates">
-                <span class="text-xl mr-3">📋</span>
+                <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
                 <span>Шаблоны</span>
             </a>
             <a href="#" class="menu-item flex items-center px-4 py-3 rounded-lg mb-2 text-white no-underline"
                 data-page="channels" data-testid="nav-channels">
-                <span class="text-xl mr-3">📢</span>
+                <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.886A1 1 0 0112 5a1 1 0 011 .886v6.228a1 1 0 01-.293.707L11 14.5l-1.707 1.707A1 1 0 018 15.5v-6.228a1 1 0 01.293-.707L10 6.886z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9a7 7 0 01-14 0"></path>
+                </svg>
                 <span>Каналы</span>
             </a>
         </nav>
+        <!-- User Footer -->
+        <div class="sidebar-footer p-4 border-t border-gray-700">
+            <div class="user-info flex items-center mb-3">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <span id="user-email" class="text-sm truncate max-w-[120px]">user@example.com</span>
+            </div>
+            <button onclick="logout()" class="flex items-center text-sm text-gray-300 hover:text-white transition-colors">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                </svg>
+                Выйти
+            </button>
+        </div>
         <!-- Footer -->
         <div class="p-4 border-t border-gray-700">
             <p class="text-xs text-gray-500 text-center">v1.0.0 © 2025</p>
@@ -346,6 +370,69 @@
                 loadPage('home');
             }
         });
+
+        // Fetch current user and display email
+        async function loadUserInfo() {
+            console.log('🔍 Loading user info...');
+            
+            try {
+                const response = await fetch('/api/auth/me', {
+                    credentials: 'include' // Send cookies
+                });
+                
+                console.log('Response status:', response.status);
+                
+                if (response.ok) {
+                    const user = await response.json();
+                    console.log('User data received:', user);
+                    
+                    const emailEl = document.getElementById('user-email');
+                    if (emailEl) {
+                        // Use email from response
+                        emailEl.textContent = user.email || 'unknown@user.com';
+                        console.log('✅ Email set to:', user.email);
+                    } else {
+                        console.error('❌ Element #user-email not found!');
+                    }
+                } else {
+                    console.error('❌ Response not OK:', response.status);
+                }
+            } catch (error) {
+                console.error('💥 Error loading user:', error);
+            }
+        }
+        
+        // Call on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('📄 DOM loaded, calling loadUserInfo...');
+            loadUserInfo();
+        });
+
+        // Logout function
+        async function logout() {
+            if (!confirm('Выйти из системы?')) {
+                return;
+            }
+
+            try {
+                // Call backend logout endpoint
+                await fetch('/api/auth/logout', {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
+
+            // Clear cookies
+            document.cookie = 'access_token=; path=/; max-age=0';
+            document.cookie = 'refresh_token=; path=/; max-age=0';
+
+            // Redirect to login
+            window.location.href = '/login';
+        }
+
+
     </script>
     <script src="/static/js/app.core.js?v=999"></script>
     <script src="/static/js/core/timers.js?v=999"></script>

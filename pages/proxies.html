@@ -3,12 +3,20 @@
         <h1 class="text-3xl font-bold text-gray-800">Управление Прокси</h1>
         <div class="flex gap-3">
             <button onclick="testAllProxies()"
-                class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-medium transition">
-                🔍 Проверить все
+                class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-medium transition flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                Проверить все
             </button>
             <button onclick="openImportProxyModal()"
-                class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition">
-                📥 Импорт списка
+                class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                Импорт списка
             </button>
         </div>
     </div>
@@ -48,11 +56,9 @@
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Статус</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Пинг</th>
+                            Последняя проверка</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Привязка</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Последняя проверка</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Действия</th>
                     </tr>
@@ -274,7 +280,7 @@
             if (data.proxies.length === 0) {
                 tbody.innerHTML = `
                 <tr>
-                    <td colspan="8" class="px-6 py-12 text-center">
+                    <td colspan="7" class="px-6 py-12 text-center">
                         <div class="text-gray-400">
                             <svg class="mx-auto h-12 w-12 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"/>
@@ -304,17 +310,24 @@
                     // Auth display
                     const authText = proxy.username ? `${proxy.username}:***` : '-';
 
-                    // Ping display
-                    const pingText = proxy.ping_ms ? `${proxy.ping_ms}ms` : '-';
-
-                    // Assignment display
+                    // Assignment display - show phone if account object available
                     let assignmentText = '<span class="text-green-600 font-medium">Свободен</span>';
-                    if (proxy.assigned_to) {
-                        assignmentText = `<span class="text-gray-600">Аккаунт #${proxy.assigned_to}</span>`;
+                    if (proxy.account && proxy.account.phone) {
+                        assignmentText = `<span class="text-gray-700 font-mono">${proxy.account.phone}</span>`;
+                    } else if (proxy.assigned_to) {
+                        assignmentText = `<span class="text-gray-600">#${proxy.assigned_to}</span>`;
                     }
 
-                    // Last check display
-                    const lastCheck = proxy.last_check ? new Date(proxy.last_check).toLocaleString('ru-RU') : '-';
+                    // Last check display - formatted DD.MM HH:mm
+                    let lastCheckText = '—';
+                    if (proxy.last_check) {
+                        const date = new Date(proxy.last_check);
+                        const day = String(date.getDate()).padStart(2, '0');
+                        const month = String(date.getMonth() + 1).padStart(2, '0');
+                        const hours = String(date.getHours()).padStart(2, '0');
+                        const minutes = String(date.getMinutes()).padStart(2, '0');
+                        lastCheckText = `${day}.${month} ${hours}:${minutes}`;
+                    }
 
                     // Editable type dropdown
                     const typeDropdown = `
@@ -326,24 +339,28 @@
                         </select>
                     `;
 
+                    // SVG Icons
+                    const searchIcon = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>`;
+                    const trashIcon = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>`;
+                    const clockIcon = `<svg class="w-4 h-4 inline mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`;
+
                     row.innerHTML = `
                         <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">${proxy.host}:${proxy.port}</td>
                         <td class="px-6 py-4 whitespace-nowrap">${typeDropdown}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-gray-500 text-sm font-mono">${authText}</td>
                         <td class="px-6 py-4 whitespace-nowrap">${statusBadge}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-gray-500 text-sm">${pingText}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-gray-500 text-sm">${clockIcon}${lastCheckText}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm">${assignmentText}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-gray-500 text-sm">${lastCheck}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm">
                             <button onclick="testSingleProxy(${proxy.id})" 
-                                class="text-blue-600 hover:text-blue-800 font-medium mr-3"
+                                class="text-blue-600 hover:text-blue-800 mr-3 inline-flex items-center"
                                 title="Проверить прокси">
-                                🔍
+                                ${searchIcon}
                             </button>
                             <button onclick="deleteProxy(${proxy.id})" 
-                                class="text-red-600 hover:text-red-800 font-medium"
+                                class="text-red-600 hover:text-red-800 inline-flex items-center"
                                 title="Удалить">
-                                🗑️
+                                ${trashIcon}
                             </button>
                         </td>
                     `;

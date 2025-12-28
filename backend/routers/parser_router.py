@@ -5,10 +5,55 @@ from datetime import datetime
 
 from backend.directus_client import directus
 from backend.services.telegram_client_factory import get_client_for_account
+from telethon import functions
+from telethon.tl.types import Channel
 import logging
 
 # Configure logging
 logger = logging.getLogger(__name__)
+
+async def detect_comments_status(client, channel):
+    """
+    Accurately detect if channel has comments enabled
+    
+    Args:
+        client: Connected TelegramClient (with proxy!)
+        channel: Channel entity
+    
+    Returns:
+        True - comments enabled
+        False - comments disabled
+        None - unable to determine
+    """
+    try:
+        if not isinstance(channel, Channel):
+            return None  # Not a channel
+        
+        # Method 1: Check full channel info for linked discussion group
+        full = await client(functions.channels.GetFullChannelRequest(
+            channel=channel
+        ))
+        
+        # If channel has linked_chat_id, it means comments are enabled via discussion group
+        if full.full_chat.linked_chat_id:
+            return True
+        
+        # Method 2: Check recent messages for replies/comments
+        messages = await client.get_messages(channel, limit=10)
+        
+        for msg in messages:
+            # Check if message has replies attribute
+            if hasattr(msg, 'replies') and msg.replies:
+                # If replies exist or comments flag is set
+                if msg.replies.replies > 0 or msg.replies.comments:
+                    return True
+        
+        # No comments found
+        return False
+        
+    except Exception as e:
+        logger.error(f"Error detecting comments for {getattr(channel, 'title', 'Unknown channel')}: {e}")
+        return None  # Unknown status
 
 router = APIRouter(prefix="/api/parser", tags=["parser"])
 
@@ -300,6 +345,7 @@ async def search_channels(data: SearchChannelsRequest):
             # Import Telethon modules here to avoid issues
             from telethon.tl.functions.contacts import SearchRequest as ContactsSearchRequest
             from telethon.tl.functions.channels import GetFullChannelRequest
+            from telethon.tl.functions.messages import GetHistoryRequest
             
             for keyword in data.keywords:
                 # Поиск через Telegram Global Search
@@ -314,7 +360,7 @@ async def search_channels(data: SearchChannelsRequest):
                         continue
                     
                     # Проверить включены ли комменты
-                    has_comments = getattr(chat, 'megagroup', False) or hasattr(chat, 'linked_chat_id')
+                    has_comments = await detect_comments_status(client, chat)
                     
                     if hasattr(chat, 'participants_count') and chat.participants_count >= data.min_subscribers:
                         results.append({
@@ -366,6 +412,7 @@ async def add_manual_channels(request: ManualChannelsRequest):
         
         # Import Telethon modules here to avoid issues
         from telethon.tl.functions.channels import GetFullChannelRequest
+        from telethon.tl.functions.messages import GetHistoryRequest
         
         for url in request.urls:
             username = url.strip().rstrip('/').split('/')[-1].replace('@', '')
@@ -373,15 +420,15 @@ async def add_manual_channels(request: ManualChannelsRequest):
             
             entity = await client.get_entity(username)
             
-            # Получить full entity для метаданных
-            full = await client(GetFullChannelRequest(channel=entity))
+            # Проверить включены ли комменты
+            has_comments = await detect_comments_status(client, entity)
             
             results.append({
                 'channel_id': entity.id,
                 'title': entity.title,
                 'username': username,
                 'subscribers': getattr(entity, 'participants_count', 0),
-                'has_comments': getattr(full.full_chat, 'linked_chat_id', None) is not None,
+                'has_comments': has_comments,
                 'url': f"https://t.me/{username}"
             })
         

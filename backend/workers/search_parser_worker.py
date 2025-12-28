@@ -14,11 +14,56 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from telethon import TelegramClient
+from telethon import TelegramClient, functions
 from telethon.sessions import StringSession
 from telethon.tl.functions.contacts import SearchRequest
+from telethon.tl.functions.channels import GetFullChannelRequest
+from telethon.tl.functions.messages import GetHistoryRequest
 from telethon.tl.types import Channel
 from telethon.errors import FloodWaitError
+
+async def detect_comments_status(client, channel):
+    """
+    Accurately detect if channel has comments enabled
+    
+    Args:
+        client: Connected TelegramClient (with proxy!)
+        channel: Channel entity
+    
+    Returns:
+        True - comments enabled
+        False - comments disabled
+        None - unable to determine
+    """
+    try:
+        if not isinstance(channel, Channel):
+            return None  # Not a channel
+        
+        # Method 1: Check full channel info for linked discussion group
+        full = await client(functions.channels.GetFullChannelRequest(
+            channel=channel
+        ))
+        
+        # If channel has linked_chat_id, it means comments are enabled via discussion group
+        if full.full_chat.linked_chat_id:
+            return True
+        
+        # Method 2: Check recent messages for replies/comments
+        messages = await client.get_messages(channel, limit=10)
+        
+        for msg in messages:
+            # Check if message has replies attribute
+            if hasattr(msg, 'replies') and msg.replies:
+                # If replies exist or comments flag is set
+                if msg.replies.replies > 0 or msg.replies.comments:
+                    return True
+        
+        # No comments found
+        return False
+        
+    except Exception as e:
+        logger.error(f"Error detecting comments for {getattr(channel, 'title', 'Unknown channel')}: {e}")
+        return None  # Unknown status
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -271,13 +316,16 @@ async def search_telegram_real(keyword: str, min_subscribers: int) -> List[Dict]
                     if subscribers_count is None:
                         subscribers_count = 0
                         
+                    # Проверить включены ли комменты
+                    has_comments_enabled = await detect_comments_status(client, chat)
+                    
                     # Собираем данные
                     channel_data = {
                         'channel_title': chat.title,
                         'channel_username': chat.username,
                         'channel_url': f"https://t.me/{chat.username}",
                         'subscribers_count': subscribers_count,
-                        'has_comments_enabled': True,  # Считаем True по умолчанию, как просили
+                        'has_comments_enabled': has_comments_enabled,
                         'last_post_id': None,  # Можно получить через GetHistoryRequest, но это доп. запрос
                         'posts_with_comments': 0  # Placeholder
                     }

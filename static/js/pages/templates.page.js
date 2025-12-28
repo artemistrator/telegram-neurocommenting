@@ -106,18 +106,22 @@ function renderTemplates(templates) {
     }
 
     container.innerHTML = templates.map(template => `
-        <div class="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200 hover:shadow-lg transition">
-            <div class="p-5">
-                <div class="flex justify-between items-start">
-                    <h3 class="text-lg font-bold text-gray-800">${escapeHtml(template.name)}</h3>
+        <div class="template-card bg-white rounded-xl shadow-md overflow-hidden border border-gray-200 hover:shadow-lg transition-all duration-200 hover:-translate-y-1">
+            <div class="p-6">
+                <div class="flex justify-between items-start mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900">${escapeHtml(template.name)}</h3>
                     <div class="flex gap-2">
                         <button onclick="window.editTemplate(${template.id})" 
-                            class="text-blue-500 hover:text-blue-700">
-                            ✏️
+                            class="icon-btn w-9 h-9 flex items-center justify-center rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                            </svg>
                         </button>
                         <button onclick="window.deleteTemplate(${template.id})" 
-                            class="text-red-500 hover:text-red-700">
-                            🗑️
+                            class="icon-btn w-9 h-9 flex items-center justify-center rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                            </svg>
                         </button>
                     </div>
                 </div>
@@ -142,14 +146,12 @@ function getProfileSummary(template) {
     const profileData = template.profile_config || {};
     const firstName = profileData.first_name || template.first_name || '';
     const lastName = profileData.last_name || template.last_name || '';
-    const bio = profileData.bio || template.bio || '';
     
     const fullName = `${firstName} ${lastName}`.trim();
     
     return `
-        <div class="mt-3">
+        <div class="mb-3">
             ${fullName ? `<p class="text-sm text-gray-600">${escapeHtml(fullName)}</p>` : ''}
-            ${bio ? `<p class="text-sm text-gray-600 line-clamp-2 mt-1">${escapeHtml(bio)}</p>` : ''}
         </div>
     `;
 }
@@ -183,8 +185,8 @@ function getCommentPolicySummary(template) {
     }
     
     return `
-        <div class="mt-3 flex items-center gap-1">
-            <span class="text-xs bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full border border-purple-200">
+        <div class="flex items-center gap-1">
+            <span class="inline-flex items-center gap-1 px-3 py-1 bg-purple-50 text-purple-700 rounded-full text-xs font-medium border border-purple-200">
                 ${filterText}${keywordsPreview ? `: ${keywordsPreview}` : ''}
             </span>
         </div>

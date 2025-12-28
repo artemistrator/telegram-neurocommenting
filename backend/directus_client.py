@@ -7,8 +7,8 @@ load_dotenv()
 
 class DirectusClient:
     def __init__(self):
-        # Default internal URL for container network, use env for host-side access
-        self.base_url = os.getenv("DIRECTUS_URL", "http://directus:8055")
+        # Default URL for host-side access, use env for flexibility
+        self.base_url = os.getenv("DIRECTUS_URL", "http://localhost:18055")
         self.email = os.getenv("DIRECTUS_ADMIN_EMAIL")
         self.password = os.getenv("DIRECTUS_ADMIN_PASSWORD")
         self.token = None

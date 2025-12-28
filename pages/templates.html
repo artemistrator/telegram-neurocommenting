@@ -4,11 +4,17 @@
         <div class="flex gap-2">
             <button id="refresh-templates-btn"
                 class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg font-medium transition flex items-center">
-                🔄 Обновить
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-1">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                </svg>
+                Обновить
             </button>
             <button id="create-template-btn"
-                class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition">
-                ➕ Создать шаблон
+                class="btn-primary btn-large px-4 py-2 bg-indigo-600 text-white rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-1 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-1">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+                Создать шаблон
             </button>
         </div>
     </div>
@@ -30,7 +36,7 @@
 
 <!-- Template Modal -->
 <div id="templateModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-    <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+    <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div class="flex justify-between items-center p-6 border-b">
             <h2 class="text-2xl font-bold text-gray-800" id="modal-title">Создать шаблон</h2>
             <button id="close-modal-btn" class="text-gray-500 hover:text-gray-700">
@@ -56,11 +62,17 @@
                 <nav class="-mb-px flex space-x-8" aria-label="Tabs">
                     <button id="profile-tab" type="button" role="tab" aria-selected="true"
                         class="border-blue-500 text-blue-600 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
-                        👤 Профиль
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 inline mr-1">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                        </svg>
+                        Профиль
                     </button>
                     <button id="comment-tab" type="button" role="tab" aria-selected="false"
                         class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
-                        💬 Комменты
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 inline mr-1">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
+                        </svg>
+                        Комменты
                     </button>
                 </nav>
             </div>
@@ -69,7 +81,12 @@
             <div id="profile-panel" role="tabpanel" class="space-y-6">
                 <!-- Personal Info Section -->
                 <div class="border border-gray-200 rounded-lg p-4">
-                    <h3 class="font-medium text-gray-800 mb-3">👤 Личные данные</h3>
+                    <h3 class="font-medium text-gray-800 mb-3 flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                        </svg> 
+                        Личные данные
+                    </h3>
                     <div class="space-y-4">
                         <div class="grid grid-cols-2 gap-4">
                             <div>
@@ -84,13 +101,7 @@
                             </div>
                         </div>
 
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Био</label>
-                            <textarea id="template-bio" rows="3"
-                                class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" readonly></textarea>
-                            <p class="mt-1 text-sm text-gray-500">💡 Bio аккаунта автоматически заполнится ссылкой на личный канал</p>
-                        </div>
-
+                        <!-- Avatar field only -->
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Аватар (URL или ID
                                 файла)</label>
@@ -102,7 +113,12 @@
 
                 <!-- Channel Settings Section -->
                 <div class="border border-gray-200 rounded-lg p-4">
-                    <h3 class="font-medium text-gray-800 mb-3">📢 Настройки канала</h3>
+                    <h3 class="font-medium text-gray-800 mb-3 flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 110-9h.75c.704 0 1.402-.03 2.09-.09m0 9.18c.253.962.584 1.892.985 2.783.247.55.06 1.21-.463 1.511l-.657.38c-.551.318-1.26.117-1.527-.461a20.845 20.845 0 01-1.44-4.282m3.102.069a18.03 18.03 0 01-.59-4.59c0-1.586.205-3.124.59-4.59m0 9.18a23.848 23.848 0 018.835 2.535M10.34 6.66a23.847 23.847 0 008.835-2.535m0 0A23.74 23.74 0 0018.795 3m.38 1.125a23.91 23.91 0 011.014 5.395m-1.014 8.855c-.118.38-.245.754-.38 1.125m.38-1.125a23.91 23.91 0 001.014-5.395m0-3.46c.495.413.811 1.035.811 1.73 0 .695-.316 1.317-.811 1.73m0-3.46a24.347 24.347 0 010 3.46" />
+                        </svg> 
+                        Настройки канала
+                    </h3>
                     <div class="space-y-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Название канала</label>
@@ -117,7 +133,12 @@
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Шаблон текста для поста</label>
+                            <h3 class="font-medium text-gray-800 mb-3 flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                                </svg> 
+                                Шаблон текста для поста
+                            </h3>
                             <textarea id="template-post-text-template" rows="3"
                                 class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                                 placeholder="Шаблон текста для поста в канале"></textarea>
@@ -130,7 +151,12 @@
             <div id="comment-panel" role="tabpanel" class="space-y-6 hidden">
                 <!-- AI Settings Section -->
                 <div class="border border-gray-200 rounded-lg p-4">
-                    <h3 class="font-medium text-gray-800 mb-3">🤖 AI Персона (Комментарии)</h3>
+                    <h3 class="font-medium text-gray-800 mb-3 flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.686-2.686l-1.036-.259v3.09l1.036-.259a3.375 3.375 0 002.686-2.686zM10.5 18.75a.75.75 0 01.75-.75h.008a.75.75 0 01.75.75v.008a.75.75 0 01-.75.75H11.25a.75.75 0 01-.75-.75v-.008z" />
+                        </svg>
+                        AI Персона (Комментарии)
+                    </h3>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">
                             System Prompt
@@ -146,7 +172,13 @@
 
                 <!-- Commenting Behavior Section -->
                 <div class="border border-gray-200 rounded-lg p-4">
-                    <h3 class="font-medium text-gray-800 mb-3">🛠 Поведение Комментирования</h3>
+                    <h3 class="font-medium text-gray-800 mb-3 flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6z" />
+                        </svg>
+                        Поведение Комментирования
+                    </h3>
                     <div class="space-y-4">
                         <div class="grid grid-cols-2 gap-4">
                             <div>
@@ -201,7 +233,7 @@
                     Отмена
                 </button>
                 <button type="button" id="submit-template-btn"
-                    class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition">
+                    class="btn-primary bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition">
                     Сохранить
                 </button>
             </div>

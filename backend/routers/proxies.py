@@ -221,10 +221,10 @@ async def list_proxies():
         if not directus.token:
             await directus.login()
         
-        # Get proxies from Directus
-        # Filter by current user (Directus will handle this based on auth token)
+        # Get proxies from Directus with last_check field
+        # Note: assigned_to is a relation field, we need to resolve it to get account phone
         response = await directus.client.get("/items/proxies", params={
-            "fields": "id,host,port,type,status,assigned_to,username",
+            "fields": "id,host,port,type,status,assigned_to,username,last_check",
             "sort": "-date_created"
         })
         
@@ -232,6 +232,27 @@ async def list_proxies():
         data = response.json()
         
         proxies = data.get('data', [])
+        
+        # Fetch linked account phones for assigned proxies
+        assigned_ids = [p['assigned_to'] for p in proxies if p.get('assigned_to')]
+        account_phones = {}
+        
+        if assigned_ids:
+            try:
+                accounts_resp = await directus.client.get("/items/accounts", params={
+                    "fields": "id,phone",
+                    "filter[id][_in]": ",".join(str(id) for id in assigned_ids)
+                })
+                accounts_resp.raise_for_status()
+                accounts_data = accounts_resp.json().get('data', [])
+                account_phones = {a['id']: a.get('phone') for a in accounts_data}
+            except Exception as e:
+                logger.warning(f"Failed to fetch account phones: {e}")
+        
+        # Enrich proxies with account info
+        for proxy in proxies:
+            if proxy.get('assigned_to') and proxy['assigned_to'] in account_phones:
+                proxy['account'] = {'phone': account_phones[proxy['assigned_to']]}
         
         return {
             'proxies': proxies,
